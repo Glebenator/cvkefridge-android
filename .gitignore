@@ -1,0 +1,22 @@
+# Local tools and generated files.
+.idea/
+.gradle/
+.kotlin/
+**/build/
+*.iml
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+.DS_Store
+Thumbs.db
+
+# Test output and local credentials.
+/artifacts/
+__pycache__/
+*.jks
+*.keystore
+keystore.properties
+.env
+.env.*
+!.env.example

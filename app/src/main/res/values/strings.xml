@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">CVKE Fridge</string>
+    <string name="start_title">CVKE Fridge</string>
+    <string name="start_body">Food inventory for the fridge. This first build has the start screen only.</string>
+    <string name="start_version">Version %1$s</string>
+</resources>

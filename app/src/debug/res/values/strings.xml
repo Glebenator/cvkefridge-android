@@ -1,0 +1,4 @@
+<resources>
+    <!-- The debug build has its own name, so that you can find it next to the Play build. -->
+    <string name="app_name">CVKE Fridge Debug</string>
+</resources>
