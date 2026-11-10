@@ -1,3 +1,4 @@
+# Checks that the copy of the shared specification in spec/ is equal to the cvkefridge repository.
 # Builds the Android app, runs lint and the unit tests, compiles the device tests, and builds the release APK and the
 # release bundle for Google Play. CI has no upload key, so the release outputs are unsigned.
 # A second job runs the device tests on an emulator.
@@ -22,6 +23,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - name: Check the copy of the shared specification
+        run: python3 scripts/update-spec.py --check
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

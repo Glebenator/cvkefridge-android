@@ -27,7 +27,8 @@ The workflow [`android.yml`](.github/workflows/android.yml) runs for each push t
 
 | Check | Gradle task | Job |
 |---|---|---|
-| Unit tests of the `:core` module | `:core:test` | `build` |
+| Copy of the shared specification is equal to the cvkefridge repository | `python3 scripts/update-spec.py --check` | `build` |
+| Unit tests of the `:core` module, with the shared test vectors | `:core:test` | `build` |
 | Debug build | `:app:assembleDebug` | `build` |
 | Device test build | `:app:assembleDebugAndroidTest` | `build` (compiled, not run) |
 | Lint, warnings as errors | `:app:lintDebug` | `build` |
@@ -68,7 +69,14 @@ Google Play needs an Android App Bundle (AAB) signed with an upload key. Without
 
 ## Tests
 
-- **Unit tests** (`core/src/test`) cover the product rules in `:core`. Today this is `AppVersionTest`.
+- **Unit tests** (`core/src/test`) cover the product rules in `:core`. Each file in `spec/vectors/` has one test class,
+  for example `CalendarDateVectorsTest`. It runs each case of the file through the core and compares the complete
+  expected result. A test fails when its vector file or section has no cases. `ChangeCodecTest` checks the JSON codec
+  of the change log. `AppVersionTest` checks the version label.
+
+  ```sh
+  ./gradlew :core:test
+  ```
 - **Device tests** (`app/src/androidTest`) run the real app. `StartScreenDeviceTest` checks that the start screen
   shows the title and the version.
 
@@ -80,6 +88,10 @@ Google Play needs an Android App Bundle (AAB) signed with an upload key. Without
 
 ```text
 core/src/main/kotlin/com/cvke/fridge/core/   Product rules in pure Kotlin, with no Android dependency
+core/src/test/kotlin/com/cvke/fridge/core/   Unit tests, and the tests that run the vectors of spec/
+spec/                                         Copy of the shared specification (rules, vectors, food table)
+spec.ref                                      The commit of cvkefridge from which spec/ comes
+scripts/update-spec.py                        Updates or checks the copy in spec/
 app/src/main/java/com/cvke/fridge/
   MainActivity.kt                             The only activity, with edge-to-edge display
   ui/                                         The start screen
@@ -88,6 +100,14 @@ app/src/main/java/com/cvke/fridge/
 
 Each file in `:core` has a file of the same name in the `CVKEFridgeCore` Swift package of cvkefridge-ios, with the same
 behaviour and the same test cases.
+
+## Shared specification
+
+The folder `spec/` is a copy of the shared specification in the
+[cvkefridge](https://github.com/Glebenator/cvkefridge) repository. It has the core rules (`rules.md`), the test
+vectors, and the table of foods. The file `spec.ref` names the commit from which the copy comes. CI checks that the
+copy is equal to that commit. To get a new version, run `python scripts/update-spec.py <commit>`. Never edit `spec/`
+by hand. To change a rule, change it in the cvkefridge repository first.
 
 ## Documents
 

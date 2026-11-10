@@ -1,0 +1,124 @@
+{
+  "description": "Facts about spec/foods.json: the number of foods, the number with days for each storage kind, and some foods. An app that reads the table must find the same.",
+  "expect": {
+    "count": 661,
+    "withDays": {
+      "pantry": 290,
+      "fridge": 363,
+      "freezer": 339
+    },
+    "samples": [
+      {
+        "foodId": "fk-1",
+        "name": "Butter",
+        "category": "dairy",
+        "days": {
+          "fridge": 30,
+          "freezer": 180
+        }
+      },
+      {
+        "foodId": "fk-58",
+        "name": "Veal",
+        "category": "meat",
+        "days": {
+          "fridge": 3,
+          "freezer": 120
+        }
+      },
+      {
+        "foodId": "fk-119",
+        "name": "Turkey parts",
+        "category": "meat",
+        "days": {
+          "fridge": 1,
+          "freezer": 270
+        }
+      },
+      {
+        "foodId": "fk-179",
+        "name": "Fruit, cut",
+        "category": "leftovers",
+        "days": {}
+      },
+      {
+        "foodId": "fk-237",
+        "name": "Spice/spices",
+        "category": "other",
+        "days": {
+          "pantry": 1095
+        }
+      },
+      {
+        "foodId": "fk-293",
+        "name": "Okra",
+        "category": "produce",
+        "days": {
+          "pantry": 1,
+          "fridge": 2,
+          "freezer": 300
+        }
+      },
+      {
+        "foodId": "fk-350",
+        "name": "Mayonnaise",
+        "category": "condiment",
+        "days": {
+          "pantry": 90
+        }
+      },
+      {
+        "foodId": "fk-406",
+        "name": "Nectar",
+        "category": "beverage",
+        "days": {
+          "pantry": 360
+        }
+      },
+      {
+        "foodId": "fk-463",
+        "name": "White wine",
+        "category": "beverage",
+        "days": {
+          "pantry": 365
+        }
+      },
+      {
+        "foodId": "fk-518",
+        "name": "Canadian bacon",
+        "category": "leftovers",
+        "days": {
+          "fridge": 14,
+          "freezer": 60
+        }
+      },
+      {
+        "foodId": "fk-574",
+        "name": "Bread",
+        "category": "bakery",
+        "days": {
+          "pantry": 3,
+          "fridge": 60
+        }
+      },
+      {
+        "foodId": "fk-629",
+        "name": "Vegetable soup",
+        "category": "leftovers",
+        "days": {
+          "fridge": 3,
+          "freezer": 90
+        }
+      },
+      {
+        "foodId": "fk-684",
+        "name": "Mustard",
+        "category": "other",
+        "days": {
+          "pantry": 180,
+          "freezer": 365
+        }
+      }
+    ]
+  }
+}

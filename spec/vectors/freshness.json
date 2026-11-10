@@ -1,0 +1,117 @@
+{
+  "description": "Rule 3 of spec/rules.md. An expiryDate of null is a batch with no expiry date.",
+  "cases": [
+    {
+      "today": "2026-11-10",
+      "expiryDate": null,
+      "expect": {
+        "daysLeft": null,
+        "freshness": "noExpiryDate"
+      }
+    },
+    {
+      "today": "2026-11-10",
+      "expiryDate": "2026-11-09",
+      "expect": {
+        "daysLeft": -1,
+        "freshness": "expired"
+      }
+    },
+    {
+      "today": "2026-11-10",
+      "expiryDate": "2026-11-10",
+      "expect": {
+        "daysLeft": 0,
+        "freshness": "expiring"
+      }
+    },
+    {
+      "today": "2026-11-10",
+      "expiryDate": "2026-11-11",
+      "expect": {
+        "daysLeft": 1,
+        "freshness": "expiring"
+      }
+    },
+    {
+      "today": "2026-11-10",
+      "expiryDate": "2026-11-12",
+      "expect": {
+        "daysLeft": 2,
+        "freshness": "expiring"
+      }
+    },
+    {
+      "today": "2026-11-10",
+      "expiryDate": "2026-11-13",
+      "expect": {
+        "daysLeft": 3,
+        "freshness": "fresh"
+      }
+    },
+    {
+      "today": "2026-11-10",
+      "expiryDate": "2026-11-14",
+      "expect": {
+        "daysLeft": 4,
+        "freshness": "fresh"
+      }
+    },
+    {
+      "today": "2026-11-10",
+      "expiryDate": "2025-11-10",
+      "expect": {
+        "daysLeft": -365,
+        "freshness": "expired"
+      }
+    },
+    {
+      "today": "2026-11-10",
+      "expiryDate": "2027-11-10",
+      "expect": {
+        "daysLeft": 365,
+        "freshness": "fresh"
+      }
+    },
+    {
+      "today": "2024-02-27",
+      "expiryDate": "2024-03-01",
+      "expect": {
+        "daysLeft": 3,
+        "freshness": "fresh"
+      }
+    },
+    {
+      "today": "2023-02-27",
+      "expiryDate": "2023-03-01",
+      "expect": {
+        "daysLeft": 2,
+        "freshness": "expiring"
+      }
+    },
+    {
+      "today": "2026-12-30",
+      "expiryDate": "2027-01-01",
+      "expect": {
+        "daysLeft": 2,
+        "freshness": "expiring"
+      }
+    },
+    {
+      "today": "2026-12-29",
+      "expiryDate": "2027-01-01",
+      "expect": {
+        "daysLeft": 3,
+        "freshness": "fresh"
+      }
+    },
+    {
+      "today": "2027-01-01",
+      "expiryDate": "2026-12-31",
+      "expect": {
+        "daysLeft": -1,
+        "freshness": "expired"
+      }
+    }
+  ]
+}

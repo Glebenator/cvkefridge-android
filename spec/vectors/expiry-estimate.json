@@ -1,0 +1,183 @@
+{
+  "description": "Rule 4 of spec/rules.md. The table of foods here is a small sample. It is not spec/foods.json.",
+  "foods": [
+    {
+      "id": "food-a",
+      "name": "Food A",
+      "category": "dairy",
+      "days": {
+        "fridge": 7,
+        "freezer": 90
+      }
+    },
+    {
+      "id": "food-b",
+      "name": "Food B",
+      "category": "produce",
+      "days": {
+        "pantry": 21,
+        "fridge": 28,
+        "freezer": 240
+      }
+    },
+    {
+      "id": "food-c",
+      "name": "Food C",
+      "category": "other",
+      "days": {}
+    },
+    {
+      "id": "food-d",
+      "name": "Food D",
+      "category": "condiment",
+      "days": {
+        "pantry": 2920
+      }
+    },
+    {
+      "id": "food-e",
+      "name": "Food E",
+      "category": "meat",
+      "days": {
+        "fridge": 1
+      }
+    }
+  ],
+  "cases": [
+    {
+      "foodId": "food-a",
+      "storageKind": "fridge",
+      "dateAdded": "2026-11-10",
+      "expect": {
+        "expiryDate": "2026-11-17",
+        "expirySource": "estimated"
+      }
+    },
+    {
+      "foodId": "food-a",
+      "storageKind": "freezer",
+      "dateAdded": "2026-11-10",
+      "expect": {
+        "expiryDate": "2027-02-08",
+        "expirySource": "estimated"
+      }
+    },
+    {
+      "foodId": "food-a",
+      "storageKind": "pantry",
+      "dateAdded": "2026-11-10",
+      "expect": {
+        "expiryDate": null,
+        "expirySource": null
+      }
+    },
+    {
+      "foodId": "food-b",
+      "storageKind": "pantry",
+      "dateAdded": "2026-11-10",
+      "expect": {
+        "expiryDate": "2026-12-01",
+        "expirySource": "estimated"
+      }
+    },
+    {
+      "foodId": "food-b",
+      "storageKind": "fridge",
+      "dateAdded": "2026-11-10",
+      "expect": {
+        "expiryDate": "2026-12-08",
+        "expirySource": "estimated"
+      }
+    },
+    {
+      "foodId": "food-b",
+      "storageKind": "freezer",
+      "dateAdded": "2026-11-10",
+      "expect": {
+        "expiryDate": "2027-07-08",
+        "expirySource": "estimated"
+      }
+    },
+    {
+      "foodId": "food-c",
+      "storageKind": "fridge",
+      "dateAdded": "2026-11-10",
+      "expect": {
+        "expiryDate": null,
+        "expirySource": null
+      }
+    },
+    {
+      "foodId": "food-x",
+      "storageKind": "fridge",
+      "dateAdded": "2026-11-10",
+      "expect": {
+        "expiryDate": null,
+        "expirySource": null
+      }
+    },
+    {
+      "foodId": "food-a",
+      "storageKind": "fridge",
+      "dateAdded": "2026-12-28",
+      "expect": {
+        "expiryDate": "2027-01-04",
+        "expirySource": "estimated"
+      }
+    },
+    {
+      "foodId": "food-a",
+      "storageKind": "fridge",
+      "dateAdded": "2024-02-25",
+      "expect": {
+        "expiryDate": "2024-03-03",
+        "expirySource": "estimated"
+      }
+    },
+    {
+      "foodId": "food-a",
+      "storageKind": "fridge",
+      "dateAdded": "2023-02-25",
+      "expect": {
+        "expiryDate": "2023-03-04",
+        "expirySource": "estimated"
+      }
+    },
+    {
+      "foodId": "food-d",
+      "storageKind": "pantry",
+      "dateAdded": "2026-11-10",
+      "expect": {
+        "expiryDate": "2034-11-08",
+        "expirySource": "estimated"
+      }
+    },
+    {
+      "foodId": "food-d",
+      "storageKind": "pantry",
+      "dateAdded": "9999-01-01",
+      "expect": {
+        "expiryDate": null,
+        "expirySource": null
+      }
+    },
+    {
+      "foodId": "food-e",
+      "storageKind": "fridge",
+      "dateAdded": "2026-11-10",
+      "expect": {
+        "expiryDate": "2026-11-11",
+        "expirySource": "estimated"
+      }
+    },
+    {
+      "foodId": "food-e",
+      "storageKind": "fridge",
+      "dateAdded": "2026-12-31",
+      "expect": {
+        "expiryDate": "2027-01-01",
+        "expirySource": "estimated"
+      }
+    }
+  ]
+}

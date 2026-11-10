@@ -1,0 +1,3809 @@
+{
+  "description": "Rule 7 of spec/rules.md. Each case has a change log and the result of its replay. 'at' is milliseconds from 1970-01-01T00:00:00Z. Quantities are thousandths.",
+  "cases": [
+    {
+      "name": "an empty log",
+      "changes": [],
+      "expect": {
+        "products": [],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [],
+        "history": [],
+        "rejected": []
+      }
+    },
+    {
+      "name": "a product and a batch",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 2000,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [],
+        "rejected": []
+      }
+    },
+    {
+      "name": "a product with no unit, no barcode, and no food",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-soup",
+              "name": "Soup of Monday",
+              "category": "leftovers",
+              "unit": null,
+              "barcode": null,
+              "foodId": null
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-soup-1",
+              "productId": "p-soup",
+              "quantity": 1000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-10",
+              "expiryDate": null,
+              "expirySource": null
+            }
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-soup",
+            "name": "Soup of Monday",
+            "category": "leftovers",
+            "unit": null,
+            "barcode": null,
+            "foodId": null
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-soup-1",
+            "productId": "p-soup",
+            "quantity": 1000,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-10",
+            "expiryDate": null,
+            "expirySource": null
+          }
+        ],
+        "history": [],
+        "rejected": []
+      }
+    },
+    {
+      "name": "use a part, and then the remainder",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 500,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 1500,
+            "date": "2026-11-11"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 0,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [
+          {
+            "changeId": "c-03",
+            "batchId": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 500,
+            "outcome": "used",
+            "date": "2026-11-10"
+          },
+          {
+            "changeId": "c-04",
+            "batchId": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 1500,
+            "outcome": "used",
+            "date": "2026-11-11"
+          }
+        ],
+        "rejected": []
+      }
+    },
+    {
+      "name": "use more than the batch has",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 5000,
+            "date": "2026-11-10"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 0,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [
+          {
+            "changeId": "c-03",
+            "batchId": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 2000,
+            "outcome": "used",
+            "date": "2026-11-10"
+          }
+        ],
+        "rejected": []
+      }
+    },
+    {
+      "name": "throw away a part",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 1000,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchThrownAway",
+            "batchId": "b-milk-1",
+            "quantity": 250,
+            "date": "2026-11-15"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 750,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [
+          {
+            "changeId": "c-03",
+            "batchId": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 1000,
+            "outcome": "used",
+            "date": "2026-11-10"
+          },
+          {
+            "changeId": "c-04",
+            "batchId": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 250,
+            "outcome": "thrownAway",
+            "date": "2026-11-15"
+          }
+        ],
+        "rejected": []
+      }
+    },
+    {
+      "name": "a use of an ended batch is rejected",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchThrownAway",
+            "batchId": "b-milk-1",
+            "quantity": 2000,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 1000,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-05",
+          "at": 1794297840000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchThrownAway",
+            "batchId": "b-milk-1",
+            "quantity": 1000,
+            "date": "2026-11-10"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 0,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [
+          {
+            "changeId": "c-03",
+            "batchId": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 2000,
+            "outcome": "thrownAway",
+            "date": "2026-11-10"
+          }
+        ],
+        "rejected": [
+          {
+            "changeId": "c-04",
+            "reason": "batchEnded"
+          },
+          {
+            "changeId": "c-05",
+            "reason": "batchEnded"
+          }
+        ]
+      }
+    },
+    {
+      "name": "quantities of 0 or less are rejected",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-2",
+              "productId": "p-milk",
+              "quantity": 0,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-10",
+              "expiryDate": null,
+              "expirySource": null
+            }
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-3",
+              "productId": "p-milk",
+              "quantity": -1000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-10",
+              "expiryDate": null,
+              "expirySource": null
+            }
+          }
+        },
+        {
+          "id": "c-05",
+          "at": 1794297840000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 0,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-06",
+          "at": 1794297900000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchThrownAway",
+            "batchId": "b-milk-1",
+            "quantity": -500,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-07",
+          "at": 1794297960000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchEdited",
+            "batchId": "b-milk-1",
+            "quantity": 0,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": null,
+            "expirySource": null
+          }
+        },
+        {
+          "id": "c-08",
+          "at": 1794298020000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchEdited",
+            "batchId": "b-milk-1",
+            "quantity": -5,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": null,
+            "expirySource": null
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 2000,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [],
+        "rejected": [
+          {
+            "changeId": "c-03",
+            "reason": "invalidQuantity"
+          },
+          {
+            "changeId": "c-04",
+            "reason": "invalidQuantity"
+          },
+          {
+            "changeId": "c-05",
+            "reason": "invalidQuantity"
+          },
+          {
+            "changeId": "c-06",
+            "reason": "invalidQuantity"
+          },
+          {
+            "changeId": "c-07",
+            "reason": "invalidQuantity"
+          },
+          {
+            "changeId": "c-08",
+            "reason": "invalidQuantity"
+          }
+        ]
+      }
+    },
+    {
+      "name": "changes for things that do not exist are rejected",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-x-1",
+              "productId": "p-x",
+              "quantity": 1000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-10",
+              "expiryDate": null,
+              "expirySource": null
+            }
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-9",
+              "productId": "p-milk",
+              "quantity": 1000,
+              "storageAreaId": "shelf-x",
+              "dateAdded": "2026-11-10",
+              "expiryDate": null,
+              "expirySource": null
+            }
+          }
+        },
+        {
+          "id": "c-05",
+          "at": 1794297840000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-x",
+            "quantity": 1000,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-06",
+          "at": 1794297900000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchThrownAway",
+            "batchId": "b-x",
+            "quantity": 1000,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-07",
+          "at": 1794297960000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchEdited",
+            "batchId": "b-x",
+            "quantity": 1000,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-10",
+            "expiryDate": null,
+            "expirySource": null
+          }
+        },
+        {
+          "id": "c-08",
+          "at": 1794298020000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchEdited",
+            "batchId": "b-milk-1",
+            "quantity": 1000,
+            "storageAreaId": "shelf-x",
+            "dateAdded": "2026-11-10",
+            "expiryDate": null,
+            "expirySource": null
+          }
+        },
+        {
+          "id": "c-09",
+          "at": 1794298080000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchDeleted",
+            "batchId": "b-x"
+          }
+        },
+        {
+          "id": "c-10",
+          "at": 1794298140000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productDeleted",
+            "productId": "p-x"
+          }
+        },
+        {
+          "id": "c-11",
+          "at": 1794298200000,
+          "origin": "phone-a",
+          "body": {
+            "type": "storageAreaDeleted",
+            "storageAreaId": "shelf-x"
+          }
+        },
+        {
+          "id": "c-12",
+          "at": 1794298260000,
+          "origin": "phone-a",
+          "body": {
+            "type": "changeUndone",
+            "changeId": "c-x"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 2000,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [],
+        "rejected": [
+          {
+            "changeId": "c-03",
+            "reason": "unknownProduct"
+          },
+          {
+            "changeId": "c-04",
+            "reason": "unknownStorageArea"
+          },
+          {
+            "changeId": "c-05",
+            "reason": "unknownBatch"
+          },
+          {
+            "changeId": "c-06",
+            "reason": "unknownBatch"
+          },
+          {
+            "changeId": "c-07",
+            "reason": "unknownBatch"
+          },
+          {
+            "changeId": "c-08",
+            "reason": "unknownStorageArea"
+          },
+          {
+            "changeId": "c-09",
+            "reason": "unknownBatch"
+          },
+          {
+            "changeId": "c-10",
+            "reason": "unknownProduct"
+          },
+          {
+            "changeId": "c-11",
+            "reason": "unknownStorageArea"
+          },
+          {
+            "changeId": "c-12",
+            "reason": "unknownChange"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the order of the checks",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-x",
+              "quantity": 0,
+              "storageAreaId": "shelf-x",
+              "dateAdded": "2026-11-10",
+              "expiryDate": null,
+              "expirySource": null
+            }
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-new-1",
+              "productId": "p-x",
+              "quantity": 0,
+              "storageAreaId": "shelf-x",
+              "dateAdded": "2026-11-10",
+              "expiryDate": null,
+              "expirySource": null
+            }
+          }
+        },
+        {
+          "id": "c-05",
+          "at": 1794297840000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-new-2",
+              "productId": "p-milk",
+              "quantity": 0,
+              "storageAreaId": "shelf-x",
+              "dateAdded": "2026-11-10",
+              "expiryDate": null,
+              "expirySource": null
+            }
+          }
+        },
+        {
+          "id": "c-06",
+          "at": 1794297900000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchEdited",
+            "batchId": "b-x",
+            "quantity": 0,
+            "storageAreaId": "shelf-x",
+            "dateAdded": "2026-11-10",
+            "expiryDate": null,
+            "expirySource": null
+          }
+        },
+        {
+          "id": "c-07",
+          "at": 1794297960000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchEdited",
+            "batchId": "b-milk-1",
+            "quantity": 0,
+            "storageAreaId": "shelf-x",
+            "dateAdded": "2026-11-10",
+            "expiryDate": null,
+            "expirySource": null
+          }
+        },
+        {
+          "id": "c-08",
+          "at": 1794298020000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-x",
+            "quantity": 0,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-09",
+          "at": 1794298080000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 2000,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-10",
+          "at": 1794298140000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 0,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-11",
+          "at": 1794298200000,
+          "origin": "phone-a",
+          "body": {
+            "type": "storageAreaDeleted",
+            "storageAreaId": "fridge"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 0,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [
+          {
+            "changeId": "c-09",
+            "batchId": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 2000,
+            "outcome": "used",
+            "date": "2026-11-10"
+          }
+        ],
+        "rejected": [
+          {
+            "changeId": "c-03",
+            "reason": "duplicateBatch"
+          },
+          {
+            "changeId": "c-04",
+            "reason": "unknownProduct"
+          },
+          {
+            "changeId": "c-05",
+            "reason": "unknownStorageArea"
+          },
+          {
+            "changeId": "c-06",
+            "reason": "unknownBatch"
+          },
+          {
+            "changeId": "c-07",
+            "reason": "unknownStorageArea"
+          },
+          {
+            "changeId": "c-08",
+            "reason": "unknownBatch"
+          },
+          {
+            "changeId": "c-10",
+            "reason": "invalidQuantity"
+          },
+          {
+            "changeId": "c-11",
+            "reason": "fixedStorageArea"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a batch with an identifier that exists is rejected",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 9000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-10",
+              "expiryDate": null,
+              "expirySource": null
+            }
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 2000,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [],
+        "rejected": [
+          {
+            "changeId": "c-03",
+            "reason": "duplicateBatch"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a batch identifier is free again after a delete",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchDeleted",
+            "batchId": "b-milk-1"
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 9000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-10",
+              "expiryDate": null,
+              "expirySource": null
+            }
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 9000,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-10",
+            "expiryDate": null,
+            "expirySource": null
+          }
+        ],
+        "history": [],
+        "rejected": []
+      }
+    },
+    {
+      "name": "a product that is saved again is replaced",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Oat milk",
+              "category": "beverage",
+              "unit": "l",
+              "barcode": null,
+              "foodId": null
+            }
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Oat milk",
+            "category": "beverage",
+            "unit": "l",
+            "barcode": null,
+            "foodId": null
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 2000,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [],
+        "rejected": []
+      }
+    },
+    {
+      "name": "the delete of a product removes its batches and their history",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-eggs",
+              "name": "Eggs",
+              "category": "dairy",
+              "unit": "pcs",
+              "barcode": null,
+              "foodId": "fk-18"
+            }
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-eggs-1",
+              "productId": "p-eggs",
+              "quantity": 12000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-09",
+              "expiryDate": "2026-11-30",
+              "expirySource": "estimated"
+            }
+          }
+        },
+        {
+          "id": "c-05",
+          "at": 1794297840000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-2",
+              "productId": "p-milk",
+              "quantity": 1000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-10",
+              "expiryDate": "2026-11-20",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-06",
+          "at": 1794297900000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 500,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-07",
+          "at": 1794297960000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-eggs-1",
+            "quantity": 2000,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-08",
+          "at": 1794298020000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchThrownAway",
+            "batchId": "b-milk-2",
+            "quantity": 1000,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-09",
+          "at": 1794298080000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productDeleted",
+            "productId": "p-milk"
+          }
+        },
+        {
+          "id": "c-10",
+          "at": 1794298140000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 500,
+            "date": "2026-11-10"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-eggs",
+            "name": "Eggs",
+            "category": "dairy",
+            "unit": "pcs",
+            "barcode": null,
+            "foodId": "fk-18"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-eggs-1",
+            "productId": "p-eggs",
+            "quantity": 10000,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-09",
+            "expiryDate": "2026-11-30",
+            "expirySource": "estimated"
+          }
+        ],
+        "history": [
+          {
+            "changeId": "c-07",
+            "batchId": "b-eggs-1",
+            "productId": "p-eggs",
+            "quantity": 2000,
+            "outcome": "used",
+            "date": "2026-11-10"
+          }
+        ],
+        "rejected": [
+          {
+            "changeId": "c-10",
+            "reason": "unknownBatch"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the delete of a batch removes its history",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-2",
+              "productId": "p-milk",
+              "quantity": 1000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-10",
+              "expiryDate": "2026-11-20",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 500,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-05",
+          "at": 1794297840000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-2",
+            "quantity": 250,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-06",
+          "at": 1794297900000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchDeleted",
+            "batchId": "b-milk-1"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-2",
+            "productId": "p-milk",
+            "quantity": 750,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-10",
+            "expiryDate": "2026-11-20",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [
+          {
+            "changeId": "c-05",
+            "batchId": "b-milk-2",
+            "productId": "p-milk",
+            "quantity": 250,
+            "outcome": "used",
+            "date": "2026-11-10"
+          }
+        ],
+        "rejected": []
+      }
+    },
+    {
+      "name": "storage areas",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "storageAreaSaved",
+            "area": {
+              "id": "shelf-1",
+              "name": "Pantry shelf",
+              "kind": "pantry"
+            }
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "storageAreaSaved",
+            "area": {
+              "id": "fridge-2",
+              "name": "Garage fridge",
+              "kind": "fridge"
+            }
+          }
+        },
+        {
+          "id": "c-05",
+          "at": 1794297840000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-2",
+              "productId": "p-milk",
+              "quantity": 1000,
+              "storageAreaId": "shelf-1",
+              "dateAdded": "2026-11-10",
+              "expiryDate": null,
+              "expirySource": null
+            }
+          }
+        },
+        {
+          "id": "c-06",
+          "at": 1794297900000,
+          "origin": "phone-a",
+          "body": {
+            "type": "storageAreaDeleted",
+            "storageAreaId": "shelf-1"
+          }
+        },
+        {
+          "id": "c-07",
+          "at": 1794297960000,
+          "origin": "phone-a",
+          "body": {
+            "type": "storageAreaSaved",
+            "area": {
+              "id": "shelf-1",
+              "name": "Pantry",
+              "kind": "pantry"
+            }
+          }
+        },
+        {
+          "id": "c-08",
+          "at": 1794298020000,
+          "origin": "phone-a",
+          "body": {
+            "type": "storageAreaDeleted",
+            "storageAreaId": "fridge-2"
+          }
+        },
+        {
+          "id": "c-09",
+          "at": 1794298080000,
+          "origin": "phone-a",
+          "body": {
+            "type": "storageAreaSaved",
+            "area": {
+              "id": "fridge",
+              "name": "My fridge",
+              "kind": "freezer"
+            }
+          }
+        },
+        {
+          "id": "c-10",
+          "at": 1794298140000,
+          "origin": "phone-a",
+          "body": {
+            "type": "storageAreaSaved",
+            "area": {
+              "id": "freezer",
+              "name": "Ice",
+              "kind": "freezer"
+            }
+          }
+        },
+        {
+          "id": "c-11",
+          "at": 1794298200000,
+          "origin": "phone-a",
+          "body": {
+            "type": "storageAreaDeleted",
+            "storageAreaId": "freezer"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          },
+          {
+            "id": "shelf-1",
+            "name": "Pantry",
+            "kind": "pantry",
+            "fixed": false
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 2000,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          },
+          {
+            "id": "b-milk-2",
+            "productId": "p-milk",
+            "quantity": 1000,
+            "storageAreaId": "shelf-1",
+            "dateAdded": "2026-11-10",
+            "expiryDate": null,
+            "expirySource": null
+          }
+        ],
+        "history": [],
+        "rejected": [
+          {
+            "changeId": "c-06",
+            "reason": "storageAreaInUse"
+          },
+          {
+            "changeId": "c-09",
+            "reason": "fixedStorageArea"
+          },
+          {
+            "changeId": "c-10",
+            "reason": "fixedStorageArea"
+          },
+          {
+            "changeId": "c-11",
+            "reason": "fixedStorageArea"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a storage area with only an ended batch can be deleted",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "storageAreaSaved",
+            "area": {
+              "id": "shelf-1",
+              "name": "Pantry shelf",
+              "kind": "pantry"
+            }
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-2",
+              "productId": "p-milk",
+              "quantity": 1000,
+              "storageAreaId": "shelf-1",
+              "dateAdded": "2026-11-10",
+              "expiryDate": null,
+              "expirySource": null
+            }
+          }
+        },
+        {
+          "id": "c-05",
+          "at": 1794297840000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-2",
+            "quantity": 1000,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-06",
+          "at": 1794297900000,
+          "origin": "phone-a",
+          "body": {
+            "type": "storageAreaDeleted",
+            "storageAreaId": "shelf-1"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 2000,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          },
+          {
+            "id": "b-milk-2",
+            "productId": "p-milk",
+            "quantity": 0,
+            "storageAreaId": "shelf-1",
+            "dateAdded": "2026-11-10",
+            "expiryDate": null,
+            "expirySource": null
+          }
+        ],
+        "history": [
+          {
+            "changeId": "c-05",
+            "batchId": "b-milk-2",
+            "productId": "p-milk",
+            "quantity": 1000,
+            "outcome": "used",
+            "date": "2026-11-10"
+          }
+        ],
+        "rejected": []
+      }
+    },
+    {
+      "name": "an edit replaces the values of a batch",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchEdited",
+            "batchId": "b-milk-1",
+            "quantity": 1500,
+            "storageAreaId": "freezer",
+            "dateAdded": "2026-11-07",
+            "expiryDate": "2027-02-05",
+            "expirySource": "estimated"
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchEdited",
+            "batchId": "b-milk-1",
+            "quantity": 1250,
+            "storageAreaId": "freezer",
+            "dateAdded": "2026-11-07",
+            "expiryDate": null,
+            "expirySource": null
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 1250,
+            "storageAreaId": "freezer",
+            "dateAdded": "2026-11-07",
+            "expiryDate": null,
+            "expirySource": null
+          }
+        ],
+        "history": [],
+        "rejected": []
+      }
+    },
+    {
+      "name": "an edit makes an ended batch active again",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 2000,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchEdited",
+            "batchId": "b-milk-1",
+            "quantity": 750,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        },
+        {
+          "id": "c-05",
+          "at": 1794297840000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 250,
+            "date": "2026-11-12"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 500,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [
+          {
+            "changeId": "c-03",
+            "batchId": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 2000,
+            "outcome": "used",
+            "date": "2026-11-10"
+          },
+          {
+            "changeId": "c-05",
+            "batchId": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 250,
+            "outcome": "used",
+            "date": "2026-11-12"
+          }
+        ],
+        "rejected": []
+      }
+    },
+    {
+      "name": "undo a use",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 2000,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "changeUndone",
+            "changeId": "c-03"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 2000,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [],
+        "rejected": []
+      }
+    },
+    {
+      "name": "undo a delete",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 500,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchDeleted",
+            "batchId": "b-milk-1"
+          }
+        },
+        {
+          "id": "c-05",
+          "at": 1794297840000,
+          "origin": "phone-a",
+          "body": {
+            "type": "changeUndone",
+            "changeId": "c-04"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 1500,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [
+          {
+            "changeId": "c-03",
+            "batchId": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 500,
+            "outcome": "used",
+            "date": "2026-11-10"
+          }
+        ],
+        "rejected": []
+      }
+    },
+    {
+      "name": "undo the second save of a product",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Oat milk",
+              "category": "beverage",
+              "unit": "l",
+              "barcode": null,
+              "foodId": null
+            }
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "changeUndone",
+            "changeId": "c-03"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 2000,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [],
+        "rejected": []
+      }
+    },
+    {
+      "name": "undo an add: later changes to that batch are rejected",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 500,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "changeUndone",
+            "changeId": "c-02"
+          }
+        },
+        {
+          "id": "c-05",
+          "at": 1794297840000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchThrownAway",
+            "batchId": "b-milk-1",
+            "quantity": 500,
+            "date": "2026-11-10"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [],
+        "history": [],
+        "rejected": [
+          {
+            "changeId": "c-03",
+            "reason": "unknownBatch"
+          },
+          {
+            "changeId": "c-05",
+            "reason": "unknownBatch"
+          }
+        ]
+      }
+    },
+    {
+      "name": "an undo cannot be undone",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 500,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "changeUndone",
+            "changeId": "c-03"
+          }
+        },
+        {
+          "id": "c-05",
+          "at": 1794297840000,
+          "origin": "phone-a",
+          "body": {
+            "type": "changeUndone",
+            "changeId": "c-04"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 2000,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [],
+        "rejected": [
+          {
+            "changeId": "c-05",
+            "reason": "cannotUndo"
+          }
+        ]
+      }
+    },
+    {
+      "name": "two undos of the same change",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 500,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "changeUndone",
+            "changeId": "c-03"
+          }
+        },
+        {
+          "id": "c-05",
+          "at": 1794297840000,
+          "origin": "phone-b",
+          "body": {
+            "type": "changeUndone",
+            "changeId": "c-03"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 2000,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [],
+        "rejected": []
+      }
+    },
+    {
+      "name": "an undo that is before its change in the order",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "changeUndone",
+            "changeId": "c-05"
+          }
+        },
+        {
+          "id": "c-05",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 500,
+            "date": "2026-11-10"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 2000,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [],
+        "rejected": []
+      }
+    },
+    {
+      "name": "an undone change that could not apply is not in the rejected list",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-x",
+            "quantity": 500,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297780000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-y",
+            "quantity": 500,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-05",
+          "at": 1794297840000,
+          "origin": "phone-a",
+          "body": {
+            "type": "changeUndone",
+            "changeId": "c-03"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 2000,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [],
+        "rejected": [
+          {
+            "changeId": "c-04",
+            "reason": "unknownBatch"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the replay sorts by instant and then by identifier",
+      "changes": [
+        {
+          "id": "c-b",
+          "at": 1794297900000,
+          "origin": "phone-b",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 1500,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-a",
+          "at": 1794297900000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchThrownAway",
+            "batchId": "b-milk-1",
+            "quantity": 1000,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-z",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794298140000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 100,
+            "date": "2026-11-10"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 0,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [
+          {
+            "changeId": "c-a",
+            "batchId": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 1000,
+            "outcome": "thrownAway",
+            "date": "2026-11-10"
+          },
+          {
+            "changeId": "c-b",
+            "batchId": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 1000,
+            "outcome": "used",
+            "date": "2026-11-10"
+          }
+        ],
+        "rejected": [
+          {
+            "changeId": "c-03",
+            "reason": "batchEnded"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a change that is in the log two times applies one time",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 500,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297720000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 500,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794298020000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchThrownAway",
+            "batchId": "b-milk-1",
+            "quantity": 1000,
+            "date": "2026-11-10"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 1500,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [
+          {
+            "changeId": "c-03",
+            "batchId": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 500,
+            "outcome": "used",
+            "date": "2026-11-10"
+          }
+        ],
+        "rejected": []
+      }
+    },
+    {
+      "name": "two phones",
+      "changes": [
+        {
+          "id": "c-01",
+          "at": 1794297600000,
+          "origin": "phone-a",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-milk",
+              "name": "Milk",
+              "category": "dairy",
+              "unit": "bottle",
+              "barcode": "5449000000996",
+              "foodId": "fk-27"
+            }
+          }
+        },
+        {
+          "id": "c-02",
+          "at": 1794297660000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-milk-1",
+              "productId": "p-milk",
+              "quantity": 2000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-08",
+              "expiryDate": "2026-11-14",
+              "expirySource": "printed"
+            }
+          }
+        },
+        {
+          "id": "d-01",
+          "at": 1794297720000,
+          "origin": "phone-b",
+          "body": {
+            "type": "productSaved",
+            "product": {
+              "id": "p-eggs",
+              "name": "Eggs",
+              "category": "dairy",
+              "unit": "pcs",
+              "barcode": null,
+              "foodId": "fk-18"
+            }
+          }
+        },
+        {
+          "id": "d-02",
+          "at": 1794297780000,
+          "origin": "phone-b",
+          "body": {
+            "type": "batchAdded",
+            "batch": {
+              "id": "b-eggs-1",
+              "productId": "p-eggs",
+              "quantity": 12000,
+              "storageAreaId": "fridge",
+              "dateAdded": "2026-11-09",
+              "expiryDate": "2026-11-30",
+              "expirySource": "estimated"
+            }
+          }
+        },
+        {
+          "id": "d-03",
+          "at": 1794297840000,
+          "origin": "phone-b",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 1500,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-03",
+          "at": 1794297840000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchUsed",
+            "batchId": "b-milk-1",
+            "quantity": 1500,
+            "date": "2026-11-10"
+          }
+        },
+        {
+          "id": "c-04",
+          "at": 1794297960000,
+          "origin": "phone-a",
+          "body": {
+            "type": "batchThrownAway",
+            "batchId": "b-eggs-1",
+            "quantity": 1000,
+            "date": "2026-11-12"
+          }
+        }
+      ],
+      "expect": {
+        "products": [
+          {
+            "id": "p-eggs",
+            "name": "Eggs",
+            "category": "dairy",
+            "unit": "pcs",
+            "barcode": null,
+            "foodId": "fk-18"
+          },
+          {
+            "id": "p-milk",
+            "name": "Milk",
+            "category": "dairy",
+            "unit": "bottle",
+            "barcode": "5449000000996",
+            "foodId": "fk-27"
+          }
+        ],
+        "storageAreas": [
+          {
+            "id": "freezer",
+            "name": "Freezer",
+            "kind": "freezer",
+            "fixed": true
+          },
+          {
+            "id": "fridge",
+            "name": "Fridge",
+            "kind": "fridge",
+            "fixed": true
+          }
+        ],
+        "batches": [
+          {
+            "id": "b-eggs-1",
+            "productId": "p-eggs",
+            "quantity": 11000,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-09",
+            "expiryDate": "2026-11-30",
+            "expirySource": "estimated"
+          },
+          {
+            "id": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 0,
+            "storageAreaId": "fridge",
+            "dateAdded": "2026-11-08",
+            "expiryDate": "2026-11-14",
+            "expirySource": "printed"
+          }
+        ],
+        "history": [
+          {
+            "changeId": "c-03",
+            "batchId": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 1500,
+            "outcome": "used",
+            "date": "2026-11-10"
+          },
+          {
+            "changeId": "d-03",
+            "batchId": "b-milk-1",
+            "productId": "p-milk",
+            "quantity": 500,
+            "outcome": "used",
+            "date": "2026-11-10"
+          },
+          {
+            "changeId": "c-04",
+            "batchId": "b-eggs-1",
+            "productId": "p-eggs",
+            "quantity": 1000,
+            "outcome": "thrownAway",
+            "date": "2026-11-12"
+          }
+        ],
+        "rejected": []
+      }
+    }
+  ]
+}

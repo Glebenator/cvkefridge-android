@@ -1,0 +1,608 @@
+{
+  "description": "Rules 2 of spec/rules.md. A date is text in the form YYYY-MM-DD. A result of null means no result.",
+  "parse": [
+    {
+      "text": "2026-11-10",
+      "expect": {
+        "valid": true,
+        "year": 2026,
+        "month": 11,
+        "day": 10
+      }
+    },
+    {
+      "text": "2024-02-29",
+      "expect": {
+        "valid": true,
+        "year": 2024,
+        "month": 2,
+        "day": 29
+      }
+    },
+    {
+      "text": "2000-02-29",
+      "expect": {
+        "valid": true,
+        "year": 2000,
+        "month": 2,
+        "day": 29
+      }
+    },
+    {
+      "text": "0001-01-01",
+      "expect": {
+        "valid": true,
+        "year": 1,
+        "month": 1,
+        "day": 1
+      }
+    },
+    {
+      "text": "9999-12-31",
+      "expect": {
+        "valid": true,
+        "year": 9999,
+        "month": 12,
+        "day": 31
+      }
+    },
+    {
+      "text": "2026-01-31",
+      "expect": {
+        "valid": true,
+        "year": 2026,
+        "month": 1,
+        "day": 31
+      }
+    },
+    {
+      "text": "2026-12-01",
+      "expect": {
+        "valid": true,
+        "year": 2026,
+        "month": 12,
+        "day": 1
+      }
+    },
+    {
+      "text": "2026-02-29",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "1900-02-29",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "2100-02-29",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "2026-13-01",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "2026-00-10",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "2026-04-31",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "2026-11-00",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "2026-11-32",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "0000-01-01",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "2026-1-10",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "2026-11-1",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "20261110",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "2026/11/10",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": " 2026-11-10",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "2026-11-10 ",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "2026-11-1O",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "２０２６-11-10",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "+026-11-10",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "-026-11-10",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "2026-11--1",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "2026-+1-10",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "2026-11-10T00:00:00Z",
+      "expect": {
+        "valid": false
+      }
+    },
+    {
+      "text": "2026-11-1١",
+      "expect": {
+        "valid": false
+      }
+    }
+  ],
+  "plusDays": [
+    {
+      "date": "2026-11-10",
+      "days": 0,
+      "expect": {
+        "date": "2026-11-10"
+      }
+    },
+    {
+      "date": "2026-11-10",
+      "days": 1,
+      "expect": {
+        "date": "2026-11-11"
+      }
+    },
+    {
+      "date": "2026-11-10",
+      "days": -1,
+      "expect": {
+        "date": "2026-11-09"
+      }
+    },
+    {
+      "date": "2026-12-31",
+      "days": 1,
+      "expect": {
+        "date": "2027-01-01"
+      }
+    },
+    {
+      "date": "2026-01-01",
+      "days": -1,
+      "expect": {
+        "date": "2025-12-31"
+      }
+    },
+    {
+      "date": "2024-02-28",
+      "days": 1,
+      "expect": {
+        "date": "2024-02-29"
+      }
+    },
+    {
+      "date": "2024-02-28",
+      "days": 2,
+      "expect": {
+        "date": "2024-03-01"
+      }
+    },
+    {
+      "date": "2023-02-28",
+      "days": 1,
+      "expect": {
+        "date": "2023-03-01"
+      }
+    },
+    {
+      "date": "2026-11-10",
+      "days": 365,
+      "expect": {
+        "date": "2027-11-10"
+      }
+    },
+    {
+      "date": "2026-11-10",
+      "days": 2920,
+      "expect": {
+        "date": "2034-11-08"
+      }
+    },
+    {
+      "date": "2026-11-10",
+      "days": -10000,
+      "expect": {
+        "date": "1999-06-25"
+      }
+    },
+    {
+      "date": "2000-01-01",
+      "days": 100000,
+      "expect": {
+        "date": "2273-10-16"
+      }
+    },
+    {
+      "date": "1970-01-01",
+      "days": -1,
+      "expect": {
+        "date": "1969-12-31"
+      }
+    },
+    {
+      "date": "1969-12-31",
+      "days": 1,
+      "expect": {
+        "date": "1970-01-01"
+      }
+    },
+    {
+      "date": "9999-12-31",
+      "days": 1,
+      "expect": {
+        "date": null
+      }
+    },
+    {
+      "date": "9999-12-31",
+      "days": 0,
+      "expect": {
+        "date": "9999-12-31"
+      }
+    },
+    {
+      "date": "0001-01-01",
+      "days": -1,
+      "expect": {
+        "date": null
+      }
+    },
+    {
+      "date": "0001-01-01",
+      "days": 3652058,
+      "expect": {
+        "date": "9999-12-31"
+      }
+    },
+    {
+      "date": "0001-01-01",
+      "days": 3652059,
+      "expect": {
+        "date": null
+      }
+    }
+  ],
+  "daysUntil": [
+    {
+      "from": "2026-11-10",
+      "to": "2026-11-10",
+      "expect": {
+        "days": 0
+      }
+    },
+    {
+      "from": "2026-11-10",
+      "to": "2026-11-13",
+      "expect": {
+        "days": 3
+      }
+    },
+    {
+      "from": "2026-11-13",
+      "to": "2026-11-10",
+      "expect": {
+        "days": -3
+      }
+    },
+    {
+      "from": "2024-02-28",
+      "to": "2024-03-01",
+      "expect": {
+        "days": 2
+      }
+    },
+    {
+      "from": "2023-02-28",
+      "to": "2023-03-01",
+      "expect": {
+        "days": 1
+      }
+    },
+    {
+      "from": "2026-12-31",
+      "to": "2027-01-01",
+      "expect": {
+        "days": 1
+      }
+    },
+    {
+      "from": "1970-01-01",
+      "to": "2026-11-10",
+      "expect": {
+        "days": 20767
+      }
+    },
+    {
+      "from": "2026-11-10",
+      "to": "1970-01-01",
+      "expect": {
+        "days": -20767
+      }
+    },
+    {
+      "from": "0001-01-01",
+      "to": "9999-12-31",
+      "expect": {
+        "days": 3652058
+      }
+    },
+    {
+      "from": "1999-12-31",
+      "to": "2000-03-01",
+      "expect": {
+        "days": 61
+      }
+    },
+    {
+      "from": "1899-12-31",
+      "to": "1900-03-01",
+      "expect": {
+        "days": 60
+      }
+    }
+  ],
+  "order": [
+    {
+      "dates": [
+        "2026-11-10",
+        "2025-12-31",
+        "2026-01-05",
+        "2026-11-09",
+        "2026-11-10",
+        "0001-01-01",
+        "9999-12-31"
+      ],
+      "expect": {
+        "sorted": [
+          "0001-01-01",
+          "2025-12-31",
+          "2026-01-05",
+          "2026-11-09",
+          "2026-11-10",
+          "2026-11-10",
+          "9999-12-31"
+        ]
+      }
+    },
+    {
+      "dates": [
+        "2026-02-01",
+        "2026-01-31",
+        "2025-12-01",
+        "2026-01-02"
+      ],
+      "expect": {
+        "sorted": [
+          "2025-12-01",
+          "2026-01-02",
+          "2026-01-31",
+          "2026-02-01"
+        ]
+      }
+    }
+  ],
+  "dateOfInstant": [
+    {
+      "epochMillis": 0,
+      "utcOffsetSeconds": 0,
+      "expect": {
+        "date": "1970-01-01"
+      }
+    },
+    {
+      "epochMillis": 0,
+      "utcOffsetSeconds": -3600,
+      "expect": {
+        "date": "1969-12-31"
+      }
+    },
+    {
+      "epochMillis": 0,
+      "utcOffsetSeconds": 3600,
+      "expect": {
+        "date": "1970-01-01"
+      }
+    },
+    {
+      "epochMillis": -1,
+      "utcOffsetSeconds": 0,
+      "expect": {
+        "date": "1969-12-31"
+      }
+    },
+    {
+      "epochMillis": -86400000,
+      "utcOffsetSeconds": 0,
+      "expect": {
+        "date": "1969-12-31"
+      }
+    },
+    {
+      "epochMillis": -86400001,
+      "utcOffsetSeconds": 0,
+      "expect": {
+        "date": "1969-12-30"
+      }
+    },
+    {
+      "epochMillis": 86399999,
+      "utcOffsetSeconds": 0,
+      "expect": {
+        "date": "1970-01-01"
+      }
+    },
+    {
+      "epochMillis": 86400000,
+      "utcOffsetSeconds": 0,
+      "expect": {
+        "date": "1970-01-02"
+      }
+    },
+    {
+      "epochMillis": 1794353400000,
+      "utcOffsetSeconds": 0,
+      "expect": {
+        "date": "2026-11-10"
+      }
+    },
+    {
+      "epochMillis": 1794353400000,
+      "utcOffsetSeconds": 3600,
+      "expect": {
+        "date": "2026-11-11"
+      }
+    },
+    {
+      "epochMillis": 1794353400000,
+      "utcOffsetSeconds": -28800,
+      "expect": {
+        "date": "2026-11-10"
+      }
+    },
+    {
+      "epochMillis": 1794270600000,
+      "utcOffsetSeconds": -28800,
+      "expect": {
+        "date": "2026-11-09"
+      }
+    },
+    {
+      "epochMillis": 1794308400000,
+      "utcOffsetSeconds": 50400,
+      "expect": {
+        "date": "2026-11-11"
+      }
+    },
+    {
+      "epochMillis": 1794311999000,
+      "utcOffsetSeconds": -43200,
+      "expect": {
+        "date": "2026-11-09"
+      }
+    },
+    {
+      "epochMillis": 1794312000000,
+      "utcOffsetSeconds": -43200,
+      "expect": {
+        "date": "2026-11-10"
+      }
+    },
+    {
+      "epochMillis": 1709164799000,
+      "utcOffsetSeconds": 1,
+      "expect": {
+        "date": "2024-02-29"
+      }
+    },
+    {
+      "epochMillis": 1772963999000,
+      "utcOffsetSeconds": -28800,
+      "expect": {
+        "date": "2026-03-08"
+      }
+    },
+    {
+      "epochMillis": 1772964000000,
+      "utcOffsetSeconds": -25200,
+      "expect": {
+        "date": "2026-03-08"
+      }
+    },
+    {
+      "epochMillis": -14182980000,
+      "utcOffsetSeconds": -18000,
+      "expect": {
+        "date": "1969-07-20"
+      }
+    },
+    {
+      "epochMillis": 1794355199999,
+      "utcOffsetSeconds": 0,
+      "expect": {
+        "date": "2026-11-10"
+      }
+    }
+  ]
+}

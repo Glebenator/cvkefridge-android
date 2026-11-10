@@ -1,0 +1,352 @@
+{
+  "description": "Rule 5 of spec/rules.md. The order has the identifiers of the active batches.",
+  "cases": [
+    {
+      "name": "the earlier expiry date is first",
+      "batches": [
+        {
+          "id": "b-1",
+          "productId": "p-1",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-01",
+          "expiryDate": "2026-11-20",
+          "expirySource": "printed"
+        },
+        {
+          "id": "b-2",
+          "productId": "p-2",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-05",
+          "expiryDate": "2026-11-12",
+          "expirySource": "printed"
+        },
+        {
+          "id": "b-3",
+          "productId": "p-3",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-03",
+          "expiryDate": "2026-11-15",
+          "expirySource": "estimated"
+        }
+      ],
+      "expect": {
+        "order": [
+          "b-2",
+          "b-3",
+          "b-1"
+        ]
+      }
+    },
+    {
+      "name": "a batch with no expiry date is last",
+      "batches": [
+        {
+          "id": "b-1",
+          "productId": "p-1",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2020-01-01",
+          "expiryDate": null,
+          "expirySource": null
+        },
+        {
+          "id": "b-2",
+          "productId": "p-2",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-05",
+          "expiryDate": "2030-01-01",
+          "expirySource": "printed"
+        }
+      ],
+      "expect": {
+        "order": [
+          "b-2",
+          "b-1"
+        ]
+      }
+    },
+    {
+      "name": "the same expiry date: the earlier date added is first",
+      "batches": [
+        {
+          "id": "b-1",
+          "productId": "p-1",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-09",
+          "expiryDate": "2026-11-20",
+          "expirySource": "printed"
+        },
+        {
+          "id": "b-2",
+          "productId": "p-1",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-02",
+          "expiryDate": "2026-11-20",
+          "expirySource": "printed"
+        },
+        {
+          "id": "b-3",
+          "productId": "p-1",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-05",
+          "expiryDate": "2026-11-20",
+          "expirySource": "printed"
+        }
+      ],
+      "expect": {
+        "order": [
+          "b-2",
+          "b-3",
+          "b-1"
+        ]
+      }
+    },
+    {
+      "name": "the same dates: the smaller identifier is first",
+      "batches": [
+        {
+          "id": "b-a",
+          "productId": "p-1",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-02",
+          "expiryDate": "2026-11-20",
+          "expirySource": "printed"
+        },
+        {
+          "id": "b-2",
+          "productId": "p-1",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-02",
+          "expiryDate": "2026-11-20",
+          "expirySource": "printed"
+        },
+        {
+          "id": "b-10",
+          "productId": "p-1",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-02",
+          "expiryDate": "2026-11-20",
+          "expirySource": "printed"
+        },
+        {
+          "id": "b",
+          "productId": "p-1",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-02",
+          "expiryDate": "2026-11-20",
+          "expirySource": "printed"
+        }
+      ],
+      "expect": {
+        "order": [
+          "b",
+          "b-10",
+          "b-2",
+          "b-a"
+        ]
+      }
+    },
+    {
+      "name": "an ended batch is not in the order",
+      "batches": [
+        {
+          "id": "b-1",
+          "productId": "p-1",
+          "quantity": 0,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-01",
+          "expiryDate": "2026-11-11",
+          "expirySource": "printed"
+        },
+        {
+          "id": "b-2",
+          "productId": "p-1",
+          "quantity": 500,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-01",
+          "expiryDate": "2026-11-12",
+          "expirySource": "printed"
+        }
+      ],
+      "expect": {
+        "order": [
+          "b-2"
+        ]
+      }
+    },
+    {
+      "name": "the source of the date has no effect",
+      "batches": [
+        {
+          "id": "b-1",
+          "productId": "p-1",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-01",
+          "expiryDate": "2026-11-14",
+          "expirySource": "printed"
+        },
+        {
+          "id": "b-2",
+          "productId": "p-1",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-01",
+          "expiryDate": "2026-11-13",
+          "expirySource": "estimated"
+        },
+        {
+          "id": "b-3",
+          "productId": "p-1",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-01",
+          "expiryDate": "2026-11-12",
+          "expirySource": "printed"
+        }
+      ],
+      "expect": {
+        "order": [
+          "b-3",
+          "b-2",
+          "b-1"
+        ]
+      }
+    },
+    {
+      "name": "no expiry dates: the earlier date added, then the identifier",
+      "batches": [
+        {
+          "id": "b-3",
+          "productId": "p-1",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-05",
+          "expiryDate": null,
+          "expirySource": null
+        },
+        {
+          "id": "b-2",
+          "productId": "p-1",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-01",
+          "expiryDate": null,
+          "expirySource": null
+        },
+        {
+          "id": "b-1",
+          "productId": "p-1",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-05",
+          "expiryDate": null,
+          "expirySource": null
+        }
+      ],
+      "expect": {
+        "order": [
+          "b-2",
+          "b-1",
+          "b-3"
+        ]
+      }
+    },
+    {
+      "name": "the storage area and the product have no effect",
+      "batches": [
+        {
+          "id": "b-1",
+          "productId": "p-9",
+          "quantity": 1000,
+          "storageAreaId": "freezer",
+          "dateAdded": "2026-11-01",
+          "expiryDate": "2026-12-01",
+          "expirySource": "printed"
+        },
+        {
+          "id": "b-2",
+          "productId": "p-1",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-01",
+          "expiryDate": "2026-11-11",
+          "expirySource": "printed"
+        },
+        {
+          "id": "b-3",
+          "productId": "p-5",
+          "quantity": 1000,
+          "storageAreaId": "shelf-1",
+          "dateAdded": "2026-11-01",
+          "expiryDate": "2026-11-21",
+          "expirySource": "printed"
+        }
+      ],
+      "expect": {
+        "order": [
+          "b-2",
+          "b-3",
+          "b-1"
+        ]
+      }
+    },
+    {
+      "name": "dates in different years",
+      "batches": [
+        {
+          "id": "b-1",
+          "productId": "p-1",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-01",
+          "expiryDate": "2027-01-02",
+          "expirySource": "printed"
+        },
+        {
+          "id": "b-2",
+          "productId": "p-1",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-01",
+          "expiryDate": "2026-12-30",
+          "expirySource": "printed"
+        },
+        {
+          "id": "b-3",
+          "productId": "p-1",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-01",
+          "expiryDate": "2025-12-31",
+          "expirySource": "printed"
+        }
+      ],
+      "expect": {
+        "order": [
+          "b-3",
+          "b-2",
+          "b-1"
+        ]
+      }
+    },
+    {
+      "name": "no batches",
+      "batches": [],
+      "expect": {
+        "order": []
+      }
+    }
+  ]
+}

@@ -20,6 +20,9 @@ CVKE Fridge has three repositories. This repository is the native Android app.
 - Keep the product rules in the `:core` module. It is pure Kotlin with no Android dependency. Each file in it has a
   file of the same name in the `CVKEFridgeCore` Swift package of cvkefridge-ios, with the same behaviour and the same
   test cases.
+- The rules in `:core` follow `spec/rules.md`. `spec/` is a copy of the shared specification in the cvkefridge
+  repository. Do not edit it. To change a rule, change it in the cvkefridge repository first. Then run
+  `python scripts/update-spec.py <commit>` and make `:core` pass the new vectors.
 - Use a ViewModel with immutable UI state and one-way data flow.
 - Use constructor injection. Add a dependency injection framework or module only when it solves a current problem.
 - Keep platform behaviour native. Share product rules and behaviour with iOS; do not force shared UI code.
@@ -42,6 +45,8 @@ CVKE Fridge has three repositories. This repository is the native Android app.
 
 ## Tests and delivery
 
+- The `:core` tests run every case of the vectors in `spec/vectors/`. Do not skip a case or weaken a comparison to make
+  a test pass.
 - Prefer a small set of end-to-end device tests for important user flows.
 - Use the production code path in device tests where possible. Do not replace the whole app with a fake.
 - Add unit tests only for calculations or failure cases that device tests cannot cover well.
@@ -55,9 +60,9 @@ CVKE Fridge has three repositories. This repository is the native Android app.
 
 ## CI
 
-- The workflow `.github/workflows/android.yml` builds the app, runs lint and the unit tests, builds the release APK
-  and bundle, and runs the device tests on an emulator for each push to `main` and each pull request. Check its result
-  before you report a change as verified.
+- The workflow `.github/workflows/android.yml` checks the copy of the shared specification, builds the app, runs lint
+  and the unit tests, builds the release APK and bundle, and runs the device tests on an emulator for each push to
+  `main` and each pull request. Check its result before you report a change as verified.
 - The cvkefridge repository starts a progress report with the first feature. Its rules will be in the `AGENTS.md` file
   there.
 
