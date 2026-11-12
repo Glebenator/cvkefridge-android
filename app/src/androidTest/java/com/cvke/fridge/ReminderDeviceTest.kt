@@ -2,6 +2,7 @@ package com.cvke.fridge
 
 import android.Manifest
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.pm.PackageManager
@@ -69,18 +70,35 @@ class ReminderDeviceTest : DeviceTest() {
 
     private fun reminder(): StatusBarNotification? = notifications.activeNotifications.firstOrNull { it.id == ReminderNotifier.NOTIFICATION_ID }
 
-    /** The app of the window in front: the app, the question of Android, or the settings of Android. */
-    private fun activePackage(): String? = automation.rootInActiveWindow?.packageName?.toString()
+    /**
+     * The apps of the windows on the screen: the app, the question of Android, the settings of Android, and other
+     * windows of the system, for example a dialog of an app that stopped.
+     */
+    private fun windowPackages(): List<String> = automation.windows.mapNotNull { it.root?.packageName?.toString() }
 
-    private fun waitForWindowOf(packageName: (String) -> Boolean) = rule.waitUntil(TIMEOUT_MILLIS) { activePackage()?.let(packageName) == true }
+    private fun waitForWindowOf(packageName: (String) -> Boolean) = rule.waitUntil(TIMEOUT_MILLIS) { windowPackages().any(packageName) }
 
-    private fun waitForTheApp() = waitForWindowOf { it == app.packageName }
+    /**
+     * Closes the window of [packageName] with the system back button. The back button goes to the window in front, which
+     * can be a window of another app. So the test presses it again while the window is there.
+     */
+    private fun closeWindowOf(packageName: (String) -> Boolean) {
+        repeat(BACK_ATTEMPTS) {
+            if (windowPackages().none(packageName)) return
+            assertTrue(automation.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK))
+            runCatching { rule.waitUntil(TIMEOUT_MILLIS / BACK_ATTEMPTS) { windowPackages().none(packageName) } }
+        }
+        assertTrue("A window of Android stays open", windowPackages().none(packageName))
+    }
 
-    /** The system back button. It goes to the window in front, also when that window is not of the app. */
-    private fun pressBack() = assertTrue(automation.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK))
+    private fun String.isQuestionOfAndroid() = endsWith("permissioncontroller")
+
+    private fun String.isSettingsOfAndroid() = this == "com.android.settings"
 
     @Before
     fun resetReminders() {
+        // The test reads all windows on the screen, not only the window in front.
+        automation.serviceInfo = automation.serviceInfo.apply { flags = flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS }
         replaceSettings(ReminderSettings())
     }
 
@@ -98,18 +116,17 @@ class ReminderDeviceTest : DeviceTest() {
         // Home offers reminders, because the inventory has food with an expiry date. Nothing asks at the start.
         waitFor(hasTestTag("reminder_offer"))
         rule.onNodeWithTag("reminder_offer").performScrollTo().assertIsDisplayed()
-        waitForTheApp()
+        assertTrue(windowPackages().none { it.isQuestionOfAndroid() })
         rule.onNodeWithTag("reminder_offer_turn_on").performClick()
 
         // The app explains the reminders first. Then "Continue" shows the question of Android in front of the app.
         rule.onNodeWithTag("notifications_explain").assertIsDisplayed()
         rule.onNodeWithTag("notifications_continue").performClick()
-        waitForWindowOf { it.endsWith("permissioncontroller") }
+        waitForWindowOf { it.isQuestionOfAndroid() }
         rule.waitUntil(TIMEOUT_MILLIS) { settings().permissionAsked }
 
         // The person closes the question with no answer. Reminders stay off, and Home does not offer them again.
-        pressBack()
-        waitForTheApp()
+        closeWindowOf { it.isQuestionOfAndroid() }
         waitUntilGone(hasTestTag("reminder_offer"))
         assertFalse(settings().enabled)
         assertTrue(settings().offerDismissed)
@@ -121,10 +138,9 @@ class ReminderDeviceTest : DeviceTest() {
         rule.onNodeWithTag("reminders_switch").assertIsOff().performClick()
         rule.onNodeWithTag("notifications_off").assertIsDisplayed()
         rule.onNodeWithTag("notifications_open_settings").performClick()
-        waitForWindowOf { it == "com.android.settings" }
+        waitForWindowOf { it.isSettingsOfAndroid() }
         allowNotifications()
-        pressBack()
-        waitForTheApp()
+        closeWindowOf { it.isSettingsOfAndroid() }
 
         // Back in the app with notifications allowed, reminders go on.
         waitFor(hasTestTag("reminders_switch") and isOn())
@@ -251,5 +267,6 @@ class ReminderDeviceTest : DeviceTest() {
 
     private companion object {
         const val TIMEOUT_MILLIS = 10_000L
+        const val BACK_ATTEMPTS = 3
     }
 }
