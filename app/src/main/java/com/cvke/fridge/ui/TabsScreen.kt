@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.cvke.fridge.R
+import com.cvke.fridge.inventory.InventoryAction
 
 /** The tabs of the app, with the names of FridgeFriend. The icon of the selected tab is filled. */
 enum class Tab(
@@ -59,6 +60,7 @@ fun TabsScreen(
     snackbar: SnackbarHostState,
     onAddFood: (openAreaId: String?) -> Unit,
     onOpenFood: (productId: String) -> Unit,
+    onPerform: (InventoryAction) -> Unit,
     onTryAgain: () -> Unit,
 ) {
     var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
@@ -118,6 +120,7 @@ fun TabsScreen(
                         onFilterChange = { filter = it },
                         onAddFood = ::addFood,
                         onOpenFood = onOpenFood,
+                        onPerform = onPerform,
                         onTryAgain = onTryAgain,
                         insets = insets,
                     )

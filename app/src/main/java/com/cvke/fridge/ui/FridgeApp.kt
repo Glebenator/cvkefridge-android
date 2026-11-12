@@ -70,6 +70,7 @@ fun FridgeApp(viewModel: FridgeViewModel) {
                     snackbar = snackbar,
                     onAddFood = { open(Screen.AddFood(openAreaId = it)) },
                     onOpenFood = { open(Screen.Food(it)) },
+                    onPerform = viewModel::perform,
                     onTryAgain = viewModel::load,
                 )
             }
@@ -94,6 +95,7 @@ fun FridgeApp(viewModel: FridgeViewModel) {
                     onEditProduct = { open(Screen.EditProduct(screen.productId)) },
                     onEditBatch = { open(Screen.EditBatch(it)) },
                     onAddBatch = { open(Screen.AddFood(productId = screen.productId)) },
+                    onPerform = viewModel::perform,
                     onTryAgain = viewModel::load,
                     onBack = { close(screen) },
                 )

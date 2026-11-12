@@ -170,6 +170,28 @@
     <string name="batch_estimated_date">Estimated date: %1$s</string>
     <string name="batch_date_added">Added %1$s</string>
 
+    <!-- Used and thrown away. -->
+    <string name="action_used">Used</string>
+    <string name="action_thrown_away">Thrown away</string>
+    <!-- The menu items that open the dialog for a quantity. -->
+    <string name="action_used_quantity">Used…</string>
+    <string name="action_thrown_away_quantity">Thrown away…</string>
+    <string name="take_used_title">How much was used?</string>
+    <string name="take_thrown_away_title">How much was thrown away?</string>
+    <!-- %1$s is the name of the food, %2$s a quantity with its unit. -->
+    <string name="take_available">%1$s: you have %2$s. The quantity comes from the oldest batch first.</string>
+    <!-- %1$s is a quantity with its unit. -->
+    <string name="error_take_too_much">You have only %1$s.</string>
+
+    <!-- Delete is for a mistake. -->
+    <string name="action_delete">Delete</string>
+    <string name="food_delete">Delete food</string>
+    <string name="batch_delete">Delete batch</string>
+    <!-- For screen readers: the buttons that open a menu. %1$s is the name of the food. -->
+    <string name="food_more_actions">More actions for %1$s</string>
+    <string name="batch_more_actions">More actions for this batch</string>
+    <string name="more_actions">More actions</string>
+
     <!-- The forms that edit a product and a batch. -->
     <string name="edit_food">Edit food</string>
     <string name="edit_batch">Edit batch</string>

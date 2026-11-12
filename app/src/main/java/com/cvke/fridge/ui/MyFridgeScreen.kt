@@ -26,8 +26,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,8 +33,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Tab
@@ -55,7 +51,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -72,18 +67,16 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import com.cvke.fridge.R
 import com.cvke.fridge.core.Category
 import com.cvke.fridge.core.Freshness
-import com.cvke.fridge.ui.theme.IconTile
+import com.cvke.fridge.inventory.InventoryAction
+import com.cvke.fridge.inventory.TakeRequest
 import com.cvke.fridge.ui.theme.Size
 
 /**
@@ -92,7 +85,8 @@ import com.cvke.fridge.ui.theme.Size
  * category, a sort control, and one card for each food in each storage area. The storage areas are tabs below the top
  * app bar. The category and the freshness are in one row of chips that does not scroll sideways
  * (`docs/research/competitor-apps.md` in the cvkefridge repository, sections 6 and 6A). The parts are Material 3
- * components. The button that adds food is on the tabs screen, and the empty state has a second one.
+ * components. The button that adds food is on the tabs screen, and the empty state has a second one. A card records
+ * its food as used or as thrown away (see [FoodCard]).
  *
  * The screen does not keep the [filter]. It calls [onFilterChange], because Home can also set the filter.
  */
@@ -104,6 +98,7 @@ fun MyFridgeScreen(
     onFilterChange: (FoodFilter) -> Unit,
     onAddFood: () -> Unit,
     onOpenFood: (productId: String) -> Unit,
+    onPerform: (InventoryAction) -> Unit,
     onTryAgain: () -> Unit,
     insets: PaddingValues,
     modifier: Modifier = Modifier,
@@ -119,6 +114,20 @@ fun MyFridgeScreen(
     val content = (state as? FridgeUiState.Ready)?.content
     val view = remember(content, filter) { content?.filtered(filter) }
     val rows = remember(view, sortKey, ascending) { view?.let { InventoryContent.sort(it.rows, sortKey, ascending) }.orEmpty() }
+
+    // The dialog for a quantity that is used or thrown away. A swipe needs no dialog: it takes all of the oldest batch.
+    var taking by rememberSaveable(stateSaver = TakeRequestSaver) { mutableStateOf(null) }
+    val inventory = (state as? FridgeUiState.Ready)?.inventory
+    taking?.let { request -> if (inventory != null) TakeDialog(request, inventory, onPerform, onDismiss = { taking = null }) }
+    fun act(row: FoodRow, action: CardAction) {
+        val outcome = action.outcome()
+        when {
+            outcome == null -> onPerform(InventoryAction.DeleteBatches(row.productId, row.batchIds))
+            action == CardAction.USE_OLDEST || action == CardAction.THROW_AWAY_OLDEST ->
+                onPerform(InventoryAction.Take(row.productId, row.batchIds, row.firstQuantity, outcome))
+            else -> taking = TakeRequest(row.productId, row.batchIds, outcome)
+        }
+    }
 
     // A new filter starts at the top of the list. The position stays when the person comes back to the screen.
     val list = rememberLazyListState()
@@ -179,7 +188,9 @@ fun MyFridgeScreen(
                             }
                         }
                     }
-                    else -> items(rows, key = { it.key }) { row -> FoodCard(row, onOpen = { onOpenFood(row.productId) }, Modifier.padding(side)) }
+                    else -> items(rows, key = { it.key }) { row ->
+                        FoodCard(row, onOpen = { onOpenFood(row.productId) }, onAction = { act(row, it) }, Modifier.padding(side))
+                    }
                 }
             }
         }
@@ -433,48 +444,5 @@ private fun ListMessage(text: String, tag: String, modifier: Modifier = Modifier
             textAlign = TextAlign.Center,
         )
         action()
-    }
-}
-
-/**
- * One food, as a Material list item on a card: the icon of its category, its name, its quantity, the days left of the
- * batch to use first in the colour of its freshness, and its category. A food with batches of different expiry dates
- * says how many. A tap opens the screen of the food. Screen readers hear the card as one item.
- */
-@Composable
-private fun FoodCard(row: FoodRow, onOpen: () -> Unit, modifier: Modifier = Modifier) {
-    val scheme = MaterialTheme.colorScheme
-    val status = freshnessColor(row.freshness)
-    val separator = stringResource(R.string.meta_separator)
-    val quantity = quantityText(row.quantity, row.unit)
-    val expiry = expiryText(row.daysLeft, row.expiry)
-    Card(
-        onClick = onOpen,
-        modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainerLow),
-    ) {
-        // The list item is one item for screen readers, so the tag of the card is on it.
-        ListItem(
-            modifier = Modifier.testTag("food_${row.key}"),
-            headlineContent = { Text(row.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            supportingContent = {
-                Column {
-                    Text(
-                        // "600 g • Expires in 3d": the quantity, a separator, and the days left in the colour of the freshness.
-                        buildAnnotatedString {
-                            append("$quantity $separator ")
-                            withStyle(SpanStyle(color = status)) { append(expiry) }
-                        },
-                    )
-                    if (row.expiryDateCount > 1) {
-                        Text(pluralStringResource(R.plurals.expiry_date_count, row.expiryDateCount, row.expiryDateCount))
-                    }
-                }
-            },
-            leadingContent = { IconTile(row.category.icon(), scheme.secondaryContainer, scheme.onSecondaryContainer) },
-            trailingContent = { Text(stringResource(row.category.label())) },
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        )
     }
 }
