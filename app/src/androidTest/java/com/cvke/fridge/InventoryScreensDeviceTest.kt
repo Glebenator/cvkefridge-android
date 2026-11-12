@@ -33,7 +33,8 @@ class InventoryScreensDeviceTest : DeviceTest() {
 
         // About names the product and the maker.
         rule.onNodeWithTag("tab_home").performClick()
-        rule.onNodeWithTag("about_button").performClick()
+        // On a small screen, Home scrolled down to the empty state. The button is at the top.
+        rule.onNodeWithTag("about_button").performScrollTo().performClick()
         rule.onNodeWithTag("about").assertIsDisplayed()
         rule.onNodeWithText("Made by").assertIsDisplayed()
         rule.onNodeWithContentDescription("cvke").assertIsDisplayed()
@@ -49,6 +50,8 @@ class InventoryScreensDeviceTest : DeviceTest() {
 
         // The expired batch is first. Its card says that the date is an estimate.
         rule.onNodeWithText("Needs attention").performScrollTo().assertIsDisplayed()
+        // The row of cards scrolls sideways in a screen that scrolls down. Bring the row into view first.
+        rule.onNodeWithTag("attention_list").performScrollTo()
         rule.onNode(
             hasTestTag("attention_sample-batch-1") and hasText("Chicken thighs") and hasText("Expired yesterday, estimated"),
         ).performScrollTo().assertIsDisplayed()
