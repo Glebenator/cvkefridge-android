@@ -2,8 +2,9 @@
 
 [![Android CI](https://github.com/Glebenator/cvkefridge-android/actions/workflows/android.yml/badge.svg?branch=main)](https://github.com/Glebenator/cvkefridge-android/actions/workflows/android.yml?query=branch%3Amain)
 
-A native Android app for food inventory in the fridge. It keeps the inventory on one phone: a person adds food by
-hand, edits it, and records it as used or as thrown away. It uses Kotlin, Jetpack Compose, and Material 3.
+A native Android app for food inventory in the fridge. It keeps the inventory on one phone: a person scans a barcode
+or adds food by hand, edits it, and records it as used or as thrown away. It uses Kotlin, Jetpack Compose, and
+Material 3.
 
 CVKE Fridge has three repositories:
 
@@ -22,12 +23,16 @@ CVKE Fridge has three repositories:
   Material 3 components. The colours are a Material 3 colour scheme from its green. The app does not use the
   wallpaper colours. The brand parts come from the design system of the owner. The decision record is ADR 0006 in the
   cvkefridge repository.
-- **Add food by hand.** The add button on the two tabs opens one short form: the name, the category, the quantity and
-  the unit, the storage area, and the expiry date. The name field suggests the foods of the table of foods and the
-  products in the inventory. A name of a product in the inventory adds a batch to it. The expiry date starts as the
-  estimated date for the food and the storage kind, and the form shows it as an estimate. The person can enter the
-  printed date with the Material date picker, or select no expiry date. The date is never today by default. "Save and
-  add another" keeps the form open with the storage area.
+- **Two ways to add food, each one tap.** The floating action button of the two tabs opens the scanner. The small
+  floating action button above it opens the form for food with no barcode. A long press on a button shows its name.
+  The empty state has the same two buttons. A menu was not used, because it adds a tap to each way.
+- **Add food by hand.** One short form: the name, the category, the quantity and the unit, the storage area, and the
+  expiry date. The name field suggests the foods of the table of foods and the products in the inventory. A name of a
+  product in the inventory adds a batch to it. The expiry date starts as the estimated date for the food and the
+  storage kind, and the form shows it as an estimate. The person can enter the printed date with the Material date
+  picker, or select no expiry date. The date is never today by default. "Save and add another" keeps the form open
+  with the storage area. The name field of an empty form has a button that opens the scanner.
+- **Add with a barcode.** See [The scanner and the product lookup](#the-scanner-and-the-product-lookup).
 - **The screen of a food.** A tap on a card opens the product with its batches in the use-first order. The person can
   edit the product (name, category, unit) and each batch (quantity, storage area, date added, expiry date), and add
   a batch.
@@ -65,6 +70,50 @@ The workflow [`android.yml`](.github/workflows/android.yml) runs for each push t
 | Device tests on an emulator (API 35) | `:app:connectedDebugAndroidTest` | `device` |
 
 The reports are in the artifacts `android-reports` and `android-device-reports` of each run.
+
+## The scanner and the product lookup
+
+- **The scanner.** A camera preview (CameraX, `CameraXViewfinder` of `camera-compose`) and the barcode reader of ML Kit
+  read EAN-13, EAN-8, UPC-A, and UPC-E all the time. A barcode counts when the camera reads the same number two times
+  in one second, and its check digit is correct. One package gives one scan: the scanner ignores the same barcode for
+  3 seconds. A read gives a short vibration, and screen readers hear "Looking up barcode …". The top app bar has a
+  light button when the camera has a flash. A tap on the picture focuses the camera there. After 10 seconds with no
+  barcode, a hint says what helps. On a wide screen, the panel is at the side of the camera.
+- **No camera and no permission.** "Type the barcode" and "Add by hand" are always below the camera, so the feature
+  works with no camera. Before Android asks for the camera, the screen explains why the app needs it. When the person
+  does not allow the camera, the screen says so and can ask again. When Android does not ask again, "Open settings"
+  opens the settings of the app, and the screen reads the permission again when the person comes back. The manifest
+  declares the camera as not required.
+- **The product lookup.** First the inventory: when a product has the barcode, the form adds a batch to it, with no
+  network. Then the cache on the phone, and then Open Food Facts (API version 2, HTTPS, only the fields that the app
+  uses). The add form opens with the name (the brand and the product name), the category, the food of the table of
+  foods when the name clearly names one (then the date is an estimate), and the quantity of the package when it is
+  reliable. The form says "From Open Food Facts" and shows the barcode that the food keeps. Each value stays editable.
+  "Save and scan next" saves and shows the scanner again. "Save" closes the form and the scanner.
+- **Failures.** A barcode that Open Food Facts does not have: the form opens with the barcode, and the empty name has
+  the focus. No connection, a timeout, too many lookups, or a server error: the scanner says which, and offers "Try
+  again", "Enter by hand" (the form with the barcode), and "Scan again". A typed number with a wrong check digit gets
+  a message. The app never sends a lookup again by itself, and it sends not more than 30 lookups in one minute.
+- **What leaves the phone.** Only the barcode number, in the request to `world.openfoodfacts.org`. The User-Agent is
+  `CVKEFridge-Android/<version>`, with no data about the person. The scanner says this below the camera. A camera
+  picture stays in memory for one read. The app writes no names, barcodes, or pictures to logs.
+- **The cache.** A found product goes into `product-lookups.json` in the private files of the app (up to 1000
+  products). "Not found" and a failed lookup do not go into it. Backup is off, so the cache stays on the phone.
+- **The HTTP client.** The lookup is one GET request, so the app uses the HTTPS client of Android
+  (`HttpsURLConnection`) with timeouts of 10 seconds, and `kotlinx-serialization-json` for the answer. It has no HTTP
+  library. A cancelled lookup closes its connection.
+- **ML Kit.** The barcode model is in the app (`com.google.mlkit:barcode-scanning`), so the scanner works with no
+  connection and with no Google Play services, and the app downloads no model. It costs about 1 MB of model files and
+  a native library of 3 to 6 MB for each ABI. The universal release APK has all four ABIs. A Play download has one.
+  ML Kit sends data about its use to Google through the transport "cct" of the Firebase transport runtime. The
+  manifest removes that transport, so the runtime does not keep or send the data. Logcat then shows "Transport backend
+  'cct' is not registered".
+- **Rules for the shared specification.** The shared specification has no rules for barcodes or for the product
+  lookup yet. The package `lookup/` has the smallest rules that work, in plain Kotlin with unit tests. They must go
+  into `spec/` of the cvkefridge repository, so that the iOS app gives the same results: the one form of a barcode
+  and its check digit (`Barcodes`), the category from the tags of Open Food Facts, the food that a name clearly names,
+  the name with the brand, the quantity of a package (`ProductMapping.kt`), and one barcode for one product
+  (`InventoryActions`).
 
 ## Build and run
 
@@ -109,7 +158,10 @@ Google Play needs an Android App Bundle (AAB) signed with an upload key. Without
   My Fridge. The tests in `inventory/` check the logic of the forms and the actions with no device: the quantity
   text, the food of a name and the estimated date (`AddFoodFormTest`), the edit forms (`EditFormsTest`), the changes
   of each action and their result in the replay (`InventoryActionsTest`), and the instants of new changes
-  (`NewChangesTest`).
+  (`NewChangesTest`). The tests in `lookup/` check the barcodes and their check digit (`BarcodesTest`), the answers of
+  Open Food Facts and the request (`OpenFoodFactsTest`, with answers of the API in `src/test/resources/openfoodfacts`),
+  the name, the category, the food, and the quantity of a looked-up product (`ProductMappingTest`), and the cache and
+  the limit of requests (`ProductLookupTest`). `ScanDebouncerTest` checks which reads of the camera count.
 
   ```sh
   ./gradlew :app:testDebugUnitTest
@@ -118,8 +170,11 @@ Google Play needs an Android App Bundle (AAB) signed with an upload key. Without
   the activity. `InventoryScreensDeviceTest` checks the screens with no food, the totals and the batches of Home, and
   the tabs, the chips, the search field, and the sort control of My Fridge. `InventoryChangesDeviceTest` adds food by
   hand, records food as used with a swipe and undoes it, throws away a quantity, edits a batch, and creates a storage
-  area. It reads the screen and the replay of the change log on the device. Gradle removes the debug app from the
-  device after these tests, with its change log.
+  area. It reads the screen and the replay of the change log on the device. `BarcodeDeviceTest` goes from a typed
+  barcode to a saved food through the scanner, the lookup, and the form, and checks "not found" and "no connection".
+  The test runner (`DeviceTestRunner`) gives the app a fake server in the place of the internet, so the device tests
+  never call Open Food Facts. `BarcodeReaderDeviceTest` draws barcodes in a picture and reads them with the ML Kit
+  model of the app. Gradle removes the debug app from the device after these tests, with its change log.
 
   ```sh
   ./gradlew :app:connectedDebugAndroidTest
@@ -150,8 +205,10 @@ scripts/update-spec.py                        Updates or checks the copy in spec
 app/src/main/java/com/cvke/fridge/
   MainActivity.kt                             The only activity, with edge-to-edge display
   FridgeApplication.kt                        The objects that live as long as the app
-  data/                                       The change log and the identifier of the phone
+  data/                                       The change log, the identifier of the phone, and the HTTPS client
   inventory/                                  The actions, the forms, and their checks, in plain Kotlin
+  lookup/                                     Barcodes, the product lookup, its cache, and the values of a scan
+  scan/                                       The camera and the barcode reader of the scanner
   ui/                                         The screens, the back stack, and the view model
   ui/theme/                                   The colour scheme, the theme, and the brand parts of the design system
 ```
