@@ -353,4 +353,32 @@
     <string name="scan_not_found">Open Food Facts has no product with this barcode. Type the name.</string>
     <string name="scan_not_looked_up">The app could not look up this barcode. Type the name.</string>
     <string name="scan_barcode">Barcode %1$s. The app keeps it with the food, so the next scan finds it.</string>
+
+    <!-- The reminder notification. -->
+    <!-- %1$d is the number of foods in the reminder. -->
+    <plurals name="reminder_title">
+        <item quantity="one">%1$d item needs attention</item>
+        <item quantity="other">%1$d items need attention</item>
+    </plurals>
+    <!-- Between two names of food. The quotes keep the space. -->
+    <string name="reminder_name_separator">", "</string>
+    <!-- %1$s is a list of names, %2$d the number of foods that are not in the list. -->
+    <plurals name="reminder_names_more">
+        <item quantity="one">%1$s and %2$d more</item>
+        <item quantity="other">%1$s and %2$d more</item>
+    </plurals>
+    <!-- The last line of the expanded reminder. %1$d is the number of foods that do not have a line. -->
+    <plurals name="reminder_lines_more">
+        <item quantity="one">And %1$d more</item>
+        <item quantity="other">And %1$d more</item>
+    </plurals>
+    <!-- One line for each food. %1$s is the name of the food. A batch is in a reminder one day after its expiry date. -->
+    <string name="reminder_line_expired">%1$s: expired yesterday</string>
+    <string name="reminder_line_today">%1$s: expires today</string>
+    <string name="reminder_line_tomorrow">%1$s: expires tomorrow</string>
+    <!-- %1$s is the name of the food, %2$d the number of days. -->
+    <plurals name="reminder_line_days">
+        <item quantity="one">%1$s: expires in %2$d day</item>
+        <item quantity="other">%1$s: expires in %2$d days</item>
+    </plurals>
 </resources>
