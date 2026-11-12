@@ -28,7 +28,7 @@ class ReminderTextTest {
         val message = checkNotNull(ReminderText.message(listOf(food("Whole milk", 1)), text))
         assertEquals("1 item needs attention", message.title)
         assertEquals("Whole milk", message.text)
-        assertEquals(listOf("Whole milk: expires tomorrow"), message.lines)
+        assertEquals(listOf("Expires tomorrow: Whole milk"), message.lines)
     }
 
     @Test
@@ -42,10 +42,10 @@ class ReminderTextTest {
         assertEquals("4 items need attention", message.title)
         assertEquals(
             listOf(
-                "Chicken thighs: expired yesterday, estimated",
-                "Baby spinach: expires today",
-                "Milk: expires tomorrow",
-                "Greek yoghurt: expires in 2 days",
+                "Expired yesterday, estimated: Chicken thighs",
+                "Expires today: Baby spinach",
+                "Expires tomorrow: Milk",
+                "Expires in 2 days: Greek yoghurt",
             ),
             message.lines,
         )
@@ -56,12 +56,12 @@ class ReminderTextTest {
     @Test
     fun fiveFoodsHaveFiveLinesAndMoreFoodsHaveALastLineWithTheirNumber() {
         val five = (1..5).map { food("Food $it", 0) }
-        assertEquals((1..5).map { "Food $it: expires today" }, checkNotNull(ReminderText.message(five, text)).lines)
+        assertEquals((1..5).map { "Expires today: Food $it" }, checkNotNull(ReminderText.message(five, text)).lines)
 
         val seven = (1..7).map { food("Food $it", 0) }
         val message = checkNotNull(ReminderText.message(seven, text))
         assertEquals("7 items need attention", message.title)
-        assertEquals((1..4).map { "Food $it: expires today" } + "And 3 more", message.lines)
+        assertEquals((1..4).map { "Expires today: Food $it" } + "And 3 more", message.lines)
         assertEquals("Food 1, Food 2 and 5 more", message.text)
 
         val six = (1..6).map { food("Food $it", 0) }
@@ -70,6 +70,19 @@ class ReminderTextTest {
         assertEquals("Food 1, Food 2", checkNotNull(ReminderText.message(two, text)).text)
         val three = (1..3).map { food("Food $it", 0) }
         assertEquals("Food 1, Food 2 and 1 more", checkNotNull(ReminderText.message(three, text)).text)
+    }
+
+    @Test
+    fun aLongNameDoesNotHideTheDaysLeftOrTheNumberOfFoods() {
+        val lasagne = "Leftover lasagne with roasted vegetables and béchamel sauce"
+        val message = checkNotNull(ReminderText.message(listOf(food(lasagne, 2, estimated = true), food("Milk", 2), food("Eggs", 2)), text))
+        // The days left are first in a line. Android can cut the end of the line, which is the name.
+        assertEquals("Expires in 2 days, estimated: $lasagne", message.lines.first())
+        // The collapsed text cuts the name, so the number of the other foods stays.
+        assertEquals("Leftover lasagne with roast…, Milk and 1 more", message.text)
+        // A name of the largest length stays as it is.
+        val longest = "x".repeat(ReminderText.MAX_NAME)
+        assertEquals(longest, checkNotNull(ReminderText.message(listOf(food(longest, 0)), text)).text)
     }
 
     /**

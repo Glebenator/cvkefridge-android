@@ -423,14 +423,12 @@
         <item quantity="one">And %1$d more</item>
         <item quantity="other">And %1$d more</item>
     </plurals>
-    <!-- One line for each food. %1$s is the name of the food. A batch is in a reminder one day after its expiry date. -->
-    <string name="reminder_line_expired">%1$s: expired yesterday</string>
-    <string name="reminder_line_today">%1$s: expires today</string>
-    <string name="reminder_line_tomorrow">%1$s: expires tomorrow</string>
-    <!-- %1$s is the name of the food, %2$d the number of days. -->
-    <plurals name="reminder_line_days">
-        <item quantity="one">%1$s: expires in %2$d day</item>
-        <item quantity="other">%1$s: expires in %2$d days</item>
+    <!-- One line for each food. %1$s is the days left, for example "Expires today, estimated", %2$s the name of the food. -->
+    <string name="reminder_line">%1$s: %2$s</string>
+    <!-- The days left in a line of the reminder, in words. %1$d is the number of days. -->
+    <plurals name="reminder_expires_in_days">
+        <item quantity="one">Expires in %1$d day</item>
+        <item quantity="other">Expires in %1$d days</item>
     </plurals>
 
     <!-- The test reminder of the debug build. No release build shows these texts. -->

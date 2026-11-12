@@ -153,10 +153,10 @@ class ReminderDeviceTest : DeviceTest() {
         assertEquals("Chicken thighs, Baby spinach and 2 more", notification.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
         assertEquals(
             listOf(
-                "Chicken thighs: expired yesterday, estimated",
-                "Baby spinach: expires today, estimated",
-                "Whole milk: expires tomorrow",
-                "Greek yoghurt: expires in 2 days",
+                "Expired yesterday, estimated: Chicken thighs",
+                "Expires today, estimated: Baby spinach",
+                "Expires tomorrow: Whole milk",
+                "Expires in 2 days: Greek yoghurt",
             ),
             notification.extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)?.map(CharSequence::toString),
         )
