@@ -33,6 +33,8 @@ CVKE Fridge has three repositories:
   picker, or select no expiry date. The date is never today by default. "Save and add another" keeps the form open
   with the storage area. The name field of an empty form has a button that opens the scanner.
 - **Add with a barcode.** See [The scanner and the product lookup](#the-scanner-and-the-product-lookup).
+- **Reminders.** One notification a day, at a time that the person sets, names the food that expires soon. See
+  [Reminders](#reminders).
 - **The screen of a food.** A tap on a card opens the product with its batches in the use-first order. The person can
   edit the product (name, category, unit) and each batch (quantity, storage area, date added, expiry date), and add
   a batch.
@@ -89,7 +91,8 @@ The reports are in the artifacts `android-reports` and `android-device-reports` 
   uses). The add form opens with the name (the brand and the product name), the category, the food of the table of
   foods when the name clearly names one (then the date is an estimate), and the quantity of the package when it is
   reliable. The form says "From Open Food Facts" and shows the barcode that the food keeps. Each value stays editable.
-  "Save and scan next" saves and shows the scanner again. "Save" closes the form and the scanner.
+  "Save and scan next" saves and shows the scanner again, with the message "… added" and "Undo" above the panel, so
+  the message does not cover the buttons of the panel. "Save" closes the form and the scanner.
 - **Failures.** A barcode that Open Food Facts does not have: the form opens with the barcode, and the empty name has
   the focus. No connection, a timeout, too many lookups, or a server error: the scanner says which, and offers "Try
   again", "Enter by hand" (the form with the barcode), and "Scan again". A typed number with a wrong check digit gets
@@ -114,6 +117,63 @@ The reports are in the artifacts `android-reports` and `android-device-reports` 
   and its check digit (`Barcodes`), the category from the tags of Open Food Facts, the food that a name clearly names,
   the name with the brand, the quantity of a package (`ProductMapping.kt`), and one barcode for one product
   (`InventoryActions`).
+
+## Reminders
+
+- **What the reminder says.** Not more than one notification a day, at a time that the person sets (09:00 at the
+  start). It names the foods with a batch that expires within the lead time or expired yesterday: "3 items need
+  attention" and "Chicken thighs, Baby spinach and 1 more". The expanded notification has one line for each food,
+  for example "Expires today, estimated: Baby spinach", up to five lines. The days left are first, because Android
+  cuts a long line at its end. A food with more than one batch is one line.
+  When no food needs attention, there is no notification. A new reminder replaces the reminder of an earlier day.
+- **Lead time.** "On the expiry date", "1 day before", or "2 days before" (the default). Two days is the "expiring"
+  rule of the shared specification, so each food in the reminder is in the filters "Expiring" and "Expired" of My
+  Fridge. A longer lead time would name food that this list does not show.
+- **An expired batch is in one reminder only.** It is in the reminder of the first day after its expiry date. After
+  that, Home and My Fridge show it, and the reminder does not name it again each day.
+- **A tap on the reminder** opens My Fridge with "Expiring" and "Expired" on, in all storage areas, also when the app
+  is open: the screens above the tabs close. The notification goes away after the tap. When the person uses or throws
+  away the food in the app, a reminder that is shown changes, or goes away when no food needs attention. The
+  notification has no actions: a reminder names more than one food, and "used" or "thrown away" needs a quantity and
+  an undo, which the app has and a notification does not. On a locked screen, the notification shows only the number
+  of foods.
+- **Where the settings are.** The settings button at the top of Home, at the place of the settings button of
+  FridgeFriend, opens Settings. The reminders are the only settings now. The screen has the switch, the time (the
+  Material time picker, with the 12-hour or the 24-hour clock of the phone, and a keyboard input), the lead time, the
+  date and the time of the next reminder, and the words "The time is approximate". The debug build also has "Send a
+  test reminder". The release build does not have this button.
+- **The permission.** The app never asks for notifications at the first start. When the inventory has food with an
+  expiry date, Home offers reminders once, below the totals ("Turn on" and "Not now"). Before Android asks, a dialog
+  explains the reminders. When the person does not allow notifications, reminders stay off, and Home does not offer
+  them again: the switch in Settings stays. When Android does not ask again, the switch opens a dialog with "Open
+  settings", which opens the notification settings of the app. When the person comes back with notifications on,
+  reminders go on. When the person turns off the notifications of the app or the category "Expiry reminders" later,
+  Settings says so each time it opens, with the action that fixes it. Before Android 13 there is no question, and the
+  same checks apply.
+- **The schedule.** An inexact alarm of `AlarmManager` (`setAndAllowWhileIdle`, `RTC_WAKEUP`), not WorkManager and not
+  an exact alarm. The Android guidance for "a user-specified action that should happen after a specific time, even if
+  the system is in idle state" is this call. Android delivers it not before the time, and on Android 12 and later
+  within one hour after it when no battery saving is on. In Doze it can still go off, but later. A job of WorkManager
+  waits for a maintenance window in Doze, and Android can delay the jobs of an app that the person does not open for
+  days by up to a day. An alarm has a quota of at least one each hour, and one each day for a restricted app. The app
+  does not need the permission for exact alarms. When the alarm goes off, a broadcast receiver reads the change log,
+  runs the replay of the core, and decides off the main thread, in a few milliseconds. It does not need the app to be
+  open that day.
+- **Dates and clocks.** The app keeps the date of the next reminder, not an instant. The instant comes from that date,
+  the time of the reminder, and the time zone of the device. After a restart of the phone, an update of the app, a
+  change of the clock or of the time zone, and each start of the app, the receiver sets the alarm again, so the
+  reminder stays at the same time on the clock of the phone, also across daylight saving time. When the phone was
+  off at the time of the reminder, the reminder of today comes when the phone is on again; the reminders of earlier
+  days do not come. The receiver for these broadcasts is on only while reminders are on.
+- **Storage.** A typed DataStore (`androidx.datastore:datastore-core`) with a JSON serializer of
+  `kotlinx-serialization`, in `reminders.json` in the private files of the app: one small immutable value with its
+  defaults and its checks in one tested place, and no protobuf plugin. A missing value gets its default. A damaged
+  file becomes the default settings. Backup is off, so the settings stay on the phone.
+- **Rules for the shared specification.** The shared specification has no rule for reminders yet. The package
+  `reminder/` has the smallest rules that work, in plain Kotlin with unit tests. They must go into `spec/` of the
+  cvkefridge repository, so that the iOS app sends the same reminders: which batches are in the reminder of a date
+  and in which order (`ReminderRules`), the lead times and their default, the dates of the schedule (`ReminderSchedule`),
+  and the text of the notification (`ReminderText`).
 
 ## Build and run
 
@@ -161,7 +221,11 @@ Google Play needs an Android App Bundle (AAB) signed with an upload key. Without
   (`NewChangesTest`). The tests in `lookup/` check the barcodes and their check digit (`BarcodesTest`), the answers of
   Open Food Facts and the request (`OpenFoodFactsTest`, with answers of the API in `src/test/resources/openfoodfacts`),
   the name, the category, the food, and the quantity of a looked-up product (`ProductMappingTest`), and the cache and
-  the limit of requests (`ProductLookupTest`). `ScanDebouncerTest` checks which reads of the camera count.
+  the limit of requests (`ProductLookupTest`). `ScanDebouncerTest` checks which reads of the camera count. The tests in
+  `reminder/` check which batches are in a reminder (`ReminderRulesTest`), its text with the English string resources
+  and their plurals (`ReminderTextTest`), the dates and the instants of the schedule across midnight, daylight saving
+  time, and time zone changes (`ReminderScheduleTest`), the default settings and their file (`ReminderSettingsTest`),
+  and the notification access (`NotificationAccessTest`).
 
   ```sh
   ./gradlew :app:testDebugUnitTest
@@ -174,7 +238,12 @@ Google Play needs an Android App Bundle (AAB) signed with an upload key. Without
   barcode to a saved food through the scanner, the lookup, and the form, and checks "not found" and "no connection".
   The test runner (`DeviceTestRunner`) gives the app a fake server in the place of the internet, so the device tests
   never call Open Food Facts. `BarcodeReaderDeviceTest` draws barcodes in a picture and reads them with the ML Kit
-  model of the app. Gradle removes the debug app from the device after these tests, with its change log.
+  model of the app. `ReminderDeviceTest` goes from the offer on Home through the explanation to the question of
+  Android, closes it with no answer, and turns reminders on through the settings of Android. It changes the settings
+  and starts the app again, runs the work of the alarm with the real change log, and checks the notification and a tap
+  on it. A test cannot take the notification permission away (Android then stops the test), so the first test needs
+  a new install: remove the debug app before you run the device tests on your own device. Gradle removes the debug
+  app from the device after these tests, with its change log.
 
   ```sh
   ./gradlew :app:connectedDebugAndroidTest
@@ -208,6 +277,7 @@ app/src/main/java/com/cvke/fridge/
   data/                                       The change log, the identifier of the phone, and the HTTPS client
   inventory/                                  The actions, the forms, and their checks, in plain Kotlin
   lookup/                                     Barcodes, the product lookup, its cache, and the values of a scan
+  reminder/                                   The daily reminder: its rules, its settings, the alarm, and the notification
   scan/                                       The camera and the barcode reader of the scanner
   ui/                                         The screens, the back stack, and the view model
   ui/theme/                                   The colour scheme, the theme, and the brand parts of the design system
