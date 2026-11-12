@@ -354,6 +354,55 @@
     <string name="scan_not_looked_up">The app could not look up this barcode. Type the name.</string>
     <string name="scan_barcode">Barcode %1$s. The app keeps it with the food, so the next scan finds it.</string>
 
+    <!-- The settings. The button on Home has this name for screen readers. -->
+    <string name="settings">Settings</string>
+    <string name="settings_reminders">Reminders</string>
+
+    <!-- The reminder settings. -->
+    <string name="reminders_switch">Expiry reminders</string>
+    <string name="reminders_switch_body">One notification a day names the food that expires soon or expired yesterday.</string>
+    <string name="reminders_time">Time</string>
+    <string name="reminders_lead">Remind me</string>
+    <string name="reminders_lead_same_day">On the expiry date</string>
+    <!-- %1$d is the number of days before the expiry date. -->
+    <plurals name="reminders_lead_days">
+        <item quantity="one">%1$d day before the expiry date</item>
+        <item quantity="other">%1$d days before the expiry date</item>
+    </plurals>
+    <!-- %1$s is a time, for example "9:00 AM". -->
+    <string name="reminders_next_today">Next reminder: today at about %1$s.</string>
+    <string name="reminders_next_tomorrow">Next reminder: tomorrow at about %1$s.</string>
+    <!-- %1$s is a date, %2$s a time. -->
+    <string name="reminders_next_date">Next reminder: %1$s at about %2$s.</string>
+    <string name="reminders_next_note">The reminder comes only when food needs attention. The time is approximate: Android can send it later to save battery.</string>
+    <!-- The time picker. Also for screen readers: the buttons that change between the clock and the keyboard. -->
+    <string name="reminders_time_title">Time of the reminder</string>
+    <string name="time_input_keyboard">Type the time</string>
+    <string name="time_input_clock">Select the time on a clock</string>
+
+    <!-- The offer of reminders on Home. %1$s is a time, for example "9:00 AM". -->
+    <string name="reminders_offer_title">Get a reminder before food expires</string>
+    <string name="reminders_offer_body">One notification a day at %1$s names the food that expires soon. You can change the time in Settings.</string>
+    <string name="action_turn_on">Turn on</string>
+    <string name="action_not_now">Not now</string>
+    <string name="action_continue">Continue</string>
+    <string name="reminders_on">Reminders are on</string>
+    <string name="reminders_in_settings">You can turn on reminders in Settings at any time.</string>
+    <string name="settings_not_saved">Couldn\'t save the setting. Try again.</string>
+
+    <!-- The explanation before Android asks for the notification permission. -->
+    <string name="notifications_ask_title">Allow notifications</string>
+    <string name="notifications_ask_body">Reminders are notifications. Next, Android asks if CVKE Fridge can send notifications. The app sends not more than one a day, and only when food needs attention. The app makes the reminder on your phone. No data leaves your phone.</string>
+    <!-- Notifications are off and only the settings of Android can turn them on. -->
+    <string name="notifications_off_title">Notifications are off</string>
+    <string name="notifications_blocked_body">Notifications for CVKE Fridge are off. To get reminders, open the settings and turn them on.</string>
+    <string name="notifications_channel_off_body">The notification category Expiry reminders is off. To get reminders, open the settings and turn it on.</string>
+    <!-- On the settings screen, when reminders are on and Android does not show them. -->
+    <string name="notifications_denied_status">You did not allow notifications, so reminders cannot show.</string>
+    <string name="notifications_blocked_status">Notifications for CVKE Fridge are off in the settings of Android, so reminders cannot show.</string>
+    <string name="notifications_channel_off_status">The notification category Expiry reminders is off in the settings of Android, so reminders cannot show.</string>
+    <string name="action_allow_notifications">Allow notifications</string>
+
     <!-- The reminder notification. -->
     <string name="reminder_channel_name">Expiry reminders</string>
     <string name="reminder_channel_description">One notification a day that names the food that expires soon or expired yesterday.</string>
@@ -383,4 +432,9 @@
         <item quantity="one">%1$s: expires in %2$d day</item>
         <item quantity="other">%1$s: expires in %2$d days</item>
     </plurals>
+
+    <!-- The test reminder of the debug build. No release build shows these texts. -->
+    <string name="test_reminder_sent" translatable="false">Test reminder sent</string>
+    <string name="test_reminder_nothing" translatable="false">No food needs a reminder today, so there is no test reminder.</string>
+    <string name="test_reminder_not_allowed" translatable="false">Android does not allow notifications for the app.</string>
 </resources>

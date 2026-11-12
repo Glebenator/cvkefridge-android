@@ -30,6 +30,7 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -43,6 +44,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.cvke.fridge.R
 import com.cvke.fridge.inventory.InventoryAction
+import com.cvke.fridge.reminder.ReminderSettings
 
 /** The tabs of the app, with the names of FridgeFriend. The icon of the selected tab is filled. */
 enum class Tab(
@@ -65,10 +67,13 @@ enum class Tab(
  * a button shows its name.
  *
  * The filter of My Fridge is here, because Home opens My Fridge with a filter: "View all" shows all food, and the
- * number of expiring or expired batches shows the food with that freshness in all storage areas.
+ * number of expiring or expired batches shows the food with that freshness in all storage areas. A tap on the reminder
+ * notification ([showRequest]) opens My Fridge in the same way, with all storage areas, no search text, and the
+ * freshness of the request.
  *
  * @param onAddFood Opens the form that adds food. It gets the storage area of the tab of My Fridge that is open.
  * @param onScan Opens the scanner. It gets the storage area of the tab of My Fridge that is open.
+ * @param onShowRequestDone My Fridge shows the request with this identifier.
  */
 @Composable
 fun TabsScreen(
@@ -80,6 +85,13 @@ fun TabsScreen(
     onManageAreas: () -> Unit,
     onPerform: (InventoryAction) -> Unit,
     onTryAgain: () -> Unit,
+    reminders: ReminderSettings?,
+    onOpenSettings: () -> Unit,
+    onTurnOnReminders: () -> Unit,
+    onDismissReminderOffer: () -> Unit,
+    onPermissionAsked: () -> Unit,
+    showRequest: ShowRequest?,
+    onShowRequestDone: (id: Long) -> Unit,
 ) {
     var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
     var filter by rememberSaveable(stateSaver = FoodFilterSaver) { mutableStateOf(FoodFilter()) }
@@ -87,6 +99,12 @@ fun TabsScreen(
     fun showMyFridge(with: FoodFilter) {
         filter = with
         tab = Tab.MY_FRIDGE
+    }
+    LaunchedEffect(showRequest) {
+        if (showRequest != null) {
+            showMyFridge(FoodFilter(freshness = showRequest.freshness))
+            onShowRequestDone(showRequest.id)
+        }
     }
     BackHandler(enabled = tab != Tab.HOME) { tab = Tab.HOME }
     fun openArea() = filter.areaId.takeIf { tab == Tab.MY_FRIDGE }
@@ -129,6 +147,11 @@ fun TabsScreen(
                         onScan = ::scan,
                         onOpenFood = onOpenFood,
                         onTryAgain = onTryAgain,
+                        reminders = reminders,
+                        onOpenSettings = onOpenSettings,
+                        onTurnOnReminders = onTurnOnReminders,
+                        onDismissReminderOffer = onDismissReminderOffer,
+                        onPermissionAsked = onPermissionAsked,
                         insets = insets,
                     )
                     Tab.MY_FRIDGE -> MyFridgeScreen(

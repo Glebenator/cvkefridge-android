@@ -29,6 +29,7 @@ import com.cvke.fridge.R
 import com.cvke.fridge.core.Outcome
 import com.cvke.fridge.inventory.InventoryAction
 import com.cvke.fridge.inventory.NoticeMessage
+import com.cvke.fridge.reminder.TestReminderResult
 import com.cvke.fridge.ui.theme.Motion
 
 /**
@@ -39,6 +40,9 @@ import com.cvke.fridge.ui.theme.Motion
  * The scanner opens the add form above itself. "Save and scan next" closes the form and shows the scanner again.
  * "Save" closes the form and the scanner. "Add by hand" on the scanner opens a form with no scan above the scanner.
  *
+ * A tap on the reminder notification closes the screens above the tabs and shows My Fridge with the expiring and the
+ * expired food, also when the app is open.
+ *
  * The screens get the state of the view model and call it for each action. No screen keeps a copy of the inventory.
  */
 @Composable
@@ -47,6 +51,8 @@ fun FridgeApp(viewModel: FridgeViewModel) {
     val formWrite by viewModel.formWrite.collectAsStateWithLifecycle()
     val notice by viewModel.notice.collectAsStateWithLifecycle()
     val lookup by viewModel.lookup.collectAsStateWithLifecycle()
+    val reminders by viewModel.reminderSettings.collectAsStateWithLifecycle()
+    val showRequest by viewModel.showRequest.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     NoticeSnackbar(notice, snackbar, onAction = viewModel::perform, onShown = viewModel::noticeShown)
 
@@ -62,6 +68,10 @@ fun FridgeApp(viewModel: FridgeViewModel) {
     // stop when the screen turns.
     val scanning = backStack.any { it is Screen.Scan }
     LaunchedEffect(scanning) { if (!scanning) viewModel.cancelLookup() }
+    // A tap on the reminder shows My Fridge. The screens above the tabs close, as with a new start of the app.
+    LaunchedEffect(showRequest) {
+        if (showRequest != null) while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+    }
     val forward = screenChange(towardsEnd = true)
     val back = screenChange(towardsEnd = false)
     NavDisplay(
@@ -82,6 +92,13 @@ fun FridgeApp(viewModel: FridgeViewModel) {
                     onManageAreas = { open(Screen.StorageAreas) },
                     onPerform = viewModel::perform,
                     onTryAgain = viewModel::load,
+                    reminders = reminders,
+                    onOpenSettings = { open(Screen.Settings) },
+                    onTurnOnReminders = { viewModel.setRemindersOn(on = true, fromOffer = true) },
+                    onDismissReminderOffer = viewModel::dismissReminderOffer,
+                    onPermissionAsked = viewModel::notificationPermissionAsked,
+                    showRequest = showRequest,
+                    onShowRequestDone = viewModel::showRequestDone,
                 )
             }
             entry<Screen.AddFood> { screen ->
@@ -157,6 +174,18 @@ fun FridgeApp(viewModel: FridgeViewModel) {
                     onClose = { close(screen) },
                 )
             }
+            entry<Screen.Settings> { screen ->
+                SettingsScreen(
+                    settings = reminders,
+                    snackbar = snackbar,
+                    onSetRemindersOn = { viewModel.setRemindersOn(it) },
+                    onSetTime = viewModel::setReminderTime,
+                    onSetLeadDays = viewModel::setReminderLeadDays,
+                    onPermissionAsked = viewModel::notificationPermissionAsked,
+                    onSendTestReminder = viewModel::sendTestReminder,
+                    onBack = { close(screen) },
+                )
+            }
             entry<Screen.StorageAreas> { screen ->
                 StorageAreasScreen(
                     state = state,
@@ -221,4 +250,14 @@ private fun noticeText(message: NoticeMessage): String = when (message) {
     is NoticeMessage.StorageAreaDeleted -> stringResource(R.string.notice_deleted, message.name)
     NoticeMessage.SaveFailed -> stringResource(R.string.save_failed)
     is NoticeMessage.Refused -> stringResource(message.reason.message())
+    NoticeMessage.RemindersOn -> stringResource(R.string.reminders_on)
+    NoticeMessage.RemindersInSettings -> stringResource(R.string.reminders_in_settings)
+    NoticeMessage.SettingsNotSaved -> stringResource(R.string.settings_not_saved)
+    is NoticeMessage.TestReminder -> stringResource(
+        when (message.result) {
+            TestReminderResult.SENT -> R.string.test_reminder_sent
+            TestReminderResult.NOTHING_TO_SEND -> R.string.test_reminder_nothing
+            TestReminderResult.NOT_ALLOWED -> R.string.test_reminder_not_allowed
+        },
+    )
 }

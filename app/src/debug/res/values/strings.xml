@@ -1,4 +1,6 @@
 <resources>
     <!-- The debug build has its own name, so that you can find it next to the Play build. -->
     <string name="app_name">CVKE Fridge Debug</string>
+    <!-- The button on the settings screen that shows the reminder of today now. -->
+    <string name="debug_send_test_reminder" translatable="false">Send a test reminder</string>
 </resources>

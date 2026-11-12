@@ -47,4 +47,8 @@ sealed interface Screen : NavKey {
     /** The list of the storage areas. */
     @Serializable
     data object StorageAreas : Screen
+
+    /** The settings: the reminders. The settings button on Home opens it, as in FridgeFriend. */
+    @Serializable
+    data object Settings : Screen
 }

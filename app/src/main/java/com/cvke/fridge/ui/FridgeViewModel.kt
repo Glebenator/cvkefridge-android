@@ -6,6 +6,7 @@ import com.cvke.fridge.core.CalendarDate
 import com.cvke.fridge.core.Change
 import com.cvke.fridge.core.ChangeBody
 import com.cvke.fridge.core.FoodTable
+import com.cvke.fridge.core.Freshness
 import com.cvke.fridge.core.Inventory
 import com.cvke.fridge.core.RejectionReason
 import com.cvke.fridge.data.ChangeLogStore
@@ -21,14 +22,18 @@ import com.cvke.fridge.lookup.ProductLookup
 import com.cvke.fridge.lookup.ScanSource
 import com.cvke.fridge.lookup.Scanned
 import com.cvke.fridge.lookup.ScannedFoods
+import com.cvke.fridge.reminder.ReminderSettings
+import com.cvke.fridge.reminder.Reminders
 import java.io.IOException
 import java.util.UUID
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -87,6 +92,12 @@ sealed interface LookupState {
     data class Failed(val barcode: String, val failure: LookupFailure) : LookupState
 }
 
+/**
+ * A request to show My Fridge with a freshness filter, from a tap on the reminder notification. The tabs screen shows
+ * it and then calls [FridgeViewModel.showRequestDone] with the [id].
+ */
+data class ShowRequest(val id: Long, val freshness: Set<Freshness>)
+
 /** The state of the write of a form. The [token] names the form, so that a form does not read the result of another form. */
 sealed interface FormWrite {
     data object Idle : FormWrite
@@ -112,6 +123,7 @@ sealed interface FormWrite {
  * @param readFoods Reads the table of foods.
  * @param today The date in the time zone of the device.
  * @param productLookup The product lookup with its cache on the phone.
+ * @param reminders The daily reminder: its settings, its alarm, and the notification.
  * @param now The instant of now, in milliseconds from 1970-01-01T00:00:00Z.
  * @param newId Makes a random identifier for a product, a batch, a storage area, or a change.
  */
@@ -121,6 +133,7 @@ class FridgeViewModel(
     private val readFoods: suspend () -> FoodTable,
     private val today: () -> CalendarDate,
     private val productLookup: ProductLookup,
+    private val reminders: Reminders,
     private val now: () -> Long = System::currentTimeMillis,
     private val newId: () -> String = { UUID.randomUUID().toString() },
     private val work: CoroutineDispatcher = Dispatchers.Default,
@@ -141,6 +154,15 @@ class FridgeViewModel(
     private var lookupJob: Job? = null
     private var lookupCount = 0L
 
+    /** The reminder settings, or null before the first read. */
+    val reminderSettings: StateFlow<ReminderSettings?> = reminders.settings.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    private val _showRequest = MutableStateFlow<ShowRequest?>(null)
+
+    /** The request of a tap on the reminder, or null. */
+    val showRequest: StateFlow<ShowRequest?> = _showRequest.asStateFlow()
+    private var showCount = 0L
+
     /** What the last read or write gave. One read or write runs at a time. */
     private class Loaded(val changes: List<Change>, val inventory: Inventory, val foods: FoodTable, val origin: String)
 
@@ -153,6 +175,8 @@ class FridgeViewModel(
 
     init {
         load()
+        // Sets the alarm again. Android removes it when the person stops the app in its settings.
+        reminderAction { reminders.restore() }
     }
 
     /** Reads the change log again. The content on the screen stays until the new content replaces it. */
@@ -171,6 +195,7 @@ class FridgeViewModel(
                         _state.value = ready(Loaded(changes, inventory, FoodTable(emptyList()), origin).also { loaded = it })
                     }
                     val table = known ?: readFoods().also { foods = it }
+                    inventoryChanged(inventory)
                     ready(Loaded(changes, inventory, table, origin).also { loaded = it })
                 } catch (_: IOException) {
                     FridgeUiState.LoadFailed
@@ -263,6 +288,59 @@ class FridgeViewModel(
         if (done) FormWrite.Idle else current
     }
 
+    /** Turns reminders on or off. [fromOffer] is true for the offer on Home, which then says that reminders are on. */
+    fun setRemindersOn(on: Boolean, fromOffer: Boolean = false) = reminderAction {
+        reminders.setEnabled(on)
+        if (on && fromOffer) _notice.value = Notice(++noticeCount, NoticeMessage.RemindersOn)
+    }
+
+    fun setReminderTime(minuteOfDay: Int) = reminderAction { reminders.setTime(minuteOfDay) }
+
+    fun setReminderLeadDays(days: Int) = reminderAction { reminders.setLeadDays(days) }
+
+    /** Home does not offer reminders again, and says where the switch is. */
+    fun dismissReminderOffer() = reminderAction {
+        reminders.dismissOffer()
+        _notice.value = Notice(++noticeCount, NoticeMessage.RemindersInSettings)
+    }
+
+    /** The app asked Android for the notification permission. */
+    fun notificationPermissionAsked() = reminderAction { reminders.permissionAsked() }
+
+    /** Shows the reminder of today now. Only the debug build has a control for it. */
+    fun sendTestReminder() = reminderAction {
+        _notice.value = Notice(++noticeCount, NoticeMessage.TestReminder(reminders.sendTest()))
+    }
+
+    /** A tap on the reminder: My Fridge with the food that is expiring or expired. */
+    fun showAttention() {
+        _showRequest.value = ShowRequest(++showCount, setOf(Freshness.EXPIRING, Freshness.EXPIRED))
+    }
+
+    fun showRequestDone(id: Long) = _showRequest.update { if (it?.id == id) null else it }
+
+    /** Runs a change of the reminder settings. A settings file that cannot be written gives a message. */
+    private fun reminderAction(action: suspend () -> Unit) {
+        viewModelScope.launch {
+            try {
+                action()
+            } catch (_: IOException) {
+                _notice.value = Notice(++noticeCount, NoticeMessage.SettingsNotSaved)
+            }
+        }
+    }
+
+    /** Changes the reminder in the notification shade for the new inventory, after the screens have it. */
+    private fun inventoryChanged(inventory: Inventory) {
+        viewModelScope.launch {
+            try {
+                reminders.inventoryChanged(inventory)
+            } catch (_: IOException) {
+                // The reminder in the shade stays as it is. The next reminder reads the settings again.
+            }
+        }
+    }
+
     private sealed interface WriteResult {
         data class Done(val changeIds: List<String>, val message: NoticeMessage?, val undoable: Boolean) : WriteResult
 
@@ -293,6 +371,7 @@ class FridgeViewModel(
         val next = Loaded(changes, inventory, current.foods, current.origin)
         loaded = next
         _state.value = ready(next)
+        inventoryChanged(inventory)
         return WriteResult.Done(added.map(Change::id), planned.message, planned.undoable)
     }
 

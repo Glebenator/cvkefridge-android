@@ -13,6 +13,7 @@ import com.cvke.fridge.core.RejectionReason
 import com.cvke.fridge.core.StorageKind
 import com.cvke.fridge.core.UseFirst
 import com.cvke.fridge.lookup.Barcodes
+import com.cvke.fridge.reminder.TestReminderResult
 
 /** One thing that the person does to the inventory. [InventoryActions.plan] makes its changes. */
 sealed interface InventoryAction {
@@ -89,6 +90,18 @@ sealed interface NoticeMessage {
 
     /** The inventory changed, and the action is not possible now. */
     data class Refused(val reason: RejectionReason) : NoticeMessage
+
+    /** The person turned reminders on from the offer on Home. */
+    data object RemindersOn : NoticeMessage
+
+    /** Home does not offer reminders again. The switch is in the settings. */
+    data object RemindersInSettings : NoticeMessage
+
+    /** The reminder settings could not be written. */
+    data object SettingsNotSaved : NoticeMessage
+
+    /** The result of the test reminder of the debug build. */
+    data class TestReminder(val result: TestReminderResult) : NoticeMessage
 }
 
 /** The result of [InventoryActions.plan]. */

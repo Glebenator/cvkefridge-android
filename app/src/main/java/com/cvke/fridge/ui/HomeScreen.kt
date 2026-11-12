@@ -67,6 +67,7 @@ import com.cvke.fridge.BuildConfig
 import com.cvke.fridge.R
 import com.cvke.fridge.core.AppVersion
 import com.cvke.fridge.core.Freshness
+import com.cvke.fridge.reminder.ReminderSettings
 import com.cvke.fridge.ui.theme.BrandSpinner
 import com.cvke.fridge.ui.theme.BrandTile
 import com.cvke.fridge.ui.theme.CvkeFridgeTheme
@@ -79,9 +80,14 @@ import java.time.LocalTime
 /**
  * Home, the first screen. Its contents are those of the Home screen of FridgeFriend (`app/(tabs)/index.tsx` in the
  * `basic_ff` repository): a greeting, a card with the totals, and the batches that need attention. The parts are
- * Material 3 components. The parts of FridgeFriend that need a function that this app does not have yet are not
- * here: the settings button and the sessions. The buttons that add food are on the tabs screen. A tap on the number of expiring or expired batches
- * calls [onShowFreshness], and My Fridge then shows the food with that freshness.
+ * Material 3 components. The settings button is at the top, as in FridgeFriend. The sessions of FridgeFriend are not
+ * here: this app has no fridge device. The buttons that add food are on the tabs screen. A tap on the number of
+ * expiring or expired batches calls [onShowFreshness], and My Fridge then shows the food with that freshness.
+ *
+ * When the inventory has food with an expiry date and reminders are off, Home offers reminders below the totals (see
+ * [ReminderOffer]). It never asks for the notification permission at the first start.
+ *
+ * @param reminders The reminder settings, or null before they are read.
  */
 @Composable
 fun HomeScreen(
@@ -92,6 +98,11 @@ fun HomeScreen(
     onScan: () -> Unit,
     onOpenFood: (productId: String) -> Unit,
     onTryAgain: () -> Unit,
+    reminders: ReminderSettings?,
+    onOpenSettings: () -> Unit,
+    onTurnOnReminders: () -> Unit,
+    onDismissReminderOffer: () -> Unit,
+    onPermissionAsked: () -> Unit,
     insets: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
@@ -135,10 +146,30 @@ fun HomeScreen(
                             tint = scheme.onSurfaceVariant,
                         )
                     }
+                    IconButton(onClick = onOpenSettings, Modifier.testTag("settings_button")) {
+                        Icon(
+                            painterResource(R.drawable.ic_settings),
+                            contentDescription = stringResource(R.string.settings),
+                            tint = scheme.onSurfaceVariant,
+                        )
+                    }
                 }
                 Spacer(Modifier.height(20.dp))
                 TotalsCard(content, onShowFreshness)
                 if (content?.sample == true) SampleNote(Modifier.padding(top = 16.dp))
+                // The offer is for a person with food that can expire. The permission question comes after "Turn on".
+                val offer = reminders?.takeIf { !it.enabled && !it.offerDismissed && content?.foods?.any { row -> row.expiry != null } == true }
+                if (offer != null) {
+                    NotificationAccessHost(
+                        asked = offer.permissionAsked,
+                        onAsked = onPermissionAsked,
+                        onTurnOn = onTurnOnReminders,
+                        // The person said no to the notifications. Home does not offer reminders again.
+                        onNotAllowed = onDismissReminderOffer,
+                    ) { _, turnOn, _ ->
+                        ReminderOffer(offer, onTurnOn = turnOn, onDismiss = onDismissReminderOffer, Modifier.padding(top = 16.dp))
+                    }
+                }
             }
             Spacer(Modifier.height(24.dp))
             if (state is FridgeUiState.LoadFailed) {
