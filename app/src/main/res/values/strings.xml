@@ -130,6 +130,101 @@
     <string name="load_failed">Couldn\'t load items. The inventory file can\'t be read.</string>
     <string name="action_try_again">Try again</string>
 
+    <!-- Actions that more than one screen has. -->
+    <string name="action_back">Back</string>
+    <string name="action_close">Close</string>
+    <string name="action_ok">OK</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="action_undo">Undo</string>
+
+    <!-- The form that adds food. Also the name of the button that opens it. -->
+    <string name="add_food">Add food</string>
+    <string name="action_save_and_add_another">Save and add another</string>
+    <string name="field_name">Name</string>
+    <string name="field_category">Category</string>
+    <string name="field_quantity">Quantity</string>
+    <string name="field_unit">Unit</string>
+    <string name="field_expiry_date">Expiry date</string>
+    <!-- Below the name field, when a product in the inventory has this name. -->
+    <string name="add_food_existing">This food is in your inventory. The form adds a batch to it.</string>
+    <!-- Below a suggested name that is the name of a product in the inventory. -->
+    <string name="suggestion_in_inventory">In your inventory</string>
+    <!-- The last item in the list of the storage areas of a form. -->
+    <string name="storage_areas_manage">Manage storage areas</string>
+    <string name="error_storage_area">Select a storage area.</string>
+
+    <!-- The expiry date of a form. -->
+    <string name="no_expiry_date">No expiry date</string>
+    <string name="expiry_use_estimate">Use the estimated date</string>
+    <!-- Below an estimated date. %1$s says where the estimate comes from. -->
+    <string name="expiry_help_estimated">%1$s Select the field to enter the printed date.</string>
+    <!-- An estimated date that the app cannot explain, for example after an edit of the batch. -->
+    <string name="expiry_estimate_plain">The app suggested this date.</string>
+    <string name="expiry_help_printed">Printed date, from the package.</string>
+    <string name="expiry_help_none">This batch has no expiry date. Select the field to enter the printed date.</string>
+    <string name="expiry_help_no_estimate">The app has no estimate for this food here. Select the field to enter the printed date.</string>
+    <!-- A food of the table of foods with the text that tells it from other foods: "Cheese, processed slices". -->
+    <string name="food_with_subtitle">%1$s, %2$s</string>
+    <!-- %1$s is the food, %2$s the storage kind, %3$d the number of days: "Estimate for Butter (Fridge): 30 days." -->
+    <plurals name="expiry_estimate_hint">
+        <item quantity="one">Estimate for %1$s (%2$s): %3$d day.</item>
+        <item quantity="other">Estimate for %1$s (%2$s): %3$d days.</item>
+    </plurals>
+
+    <!-- Storage kinds -->
+    <string name="storage_kind_pantry">Pantry</string>
+    <string name="storage_kind_fridge">Fridge</string>
+    <string name="storage_kind_freezer">Freezer</string>
+
+    <!-- The units in the list of units. -->
+    <string name="unit_name_none">No unit</string>
+    <string name="unit_name_pcs">pcs</string>
+    <string name="unit_name_g">g</string>
+    <string name="unit_name_kg">kg</string>
+    <string name="unit_name_ml">ml</string>
+    <string name="unit_name_l">l</string>
+    <string name="unit_name_pack">pack</string>
+    <string name="unit_name_bottle">bottle</string>
+    <string name="unit_name_slice">slice</string>
+    <string name="unit_name_cup">cup</string>
+
+    <!-- The problem of a field, below the field. -->
+    <string name="error_name_empty">Enter a name.</string>
+    <string name="error_name_too_long">The name is too long. Use 80 characters or fewer.</string>
+    <string name="error_name_in_use">Another food has this name.</string>
+    <string name="error_quantity_empty">Enter a quantity.</string>
+    <string name="error_quantity_not_a_number">Enter a number, for example 1.5.</string>
+    <string name="error_quantity_decimals">Use 3 decimal places or fewer.</string>
+    <string name="error_quantity_not_positive">Enter a quantity above 0.</string>
+    <string name="error_quantity_too_large">The quantity is too large.</string>
+
+    <!-- A write to the change log failed. -->
+    <string name="save_failed">Couldn\'t save the change. The inventory file can\'t be written.</string>
+    <string name="save_failed_form">Couldn\'t save. The inventory file can\'t be written. Your entries are still here. Try again.</string>
+
+    <!-- The inventory changed, and an action is not possible now. -->
+    <string name="refused_unknown_product">This food is no longer in the inventory.</string>
+    <string name="refused_unknown_batch">This batch is no longer in the inventory.</string>
+    <string name="refused_unknown_storage_area">This storage area is no longer there. Select a different one.</string>
+    <string name="refused_fixed_storage_area">Fridge and Freezer are fixed. You can\'t change or delete them.</string>
+    <string name="refused_storage_area_in_use">This storage area has food in it. Move the food, or record it as used or thrown away, and then delete the storage area.</string>
+    <string name="refused_batch_ended">This batch has no quantity left.</string>
+    <string name="refused_duplicate_batch">Couldn\'t add the batch. Try again.</string>
+    <string name="refused_cannot_undo">This can\'t be undone.</string>
+
+    <!-- The snackbar after an action. %1$s is the name of a food or of a storage area. -->
+    <string name="notice_added">%1$s added</string>
+    <string name="notice_deleted">%1$s deleted</string>
+    <!-- %1$s is a quantity with its unit, %2$s the name of the food: "1.5 l of Whole milk used". -->
+    <string name="notice_used">%1$s of %2$s used</string>
+    <string name="notice_thrown_away">%1$s of %2$s thrown away</string>
+    <!-- %1$d is the number of batches, %2$s the name of the food. -->
+    <plurals name="notice_batches_deleted">
+        <item quantity="one">%1$d batch of %2$s deleted</item>
+        <item quantity="other">%1$d batches of %2$s deleted</item>
+    </plurals>
+
     <!-- The sample of the debug build. -->
     <string name="sample_note">Sample data</string>
 </resources>

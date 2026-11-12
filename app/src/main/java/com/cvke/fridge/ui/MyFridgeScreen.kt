@@ -92,7 +92,7 @@ import com.cvke.fridge.ui.theme.Size
  * category, a sort control, and one card for each food in each storage area. The storage areas are tabs below the top
  * app bar. The category and the freshness are in one row of chips that does not scroll sideways
  * (`docs/research/competitor-apps.md` in the cvkefridge repository, sections 6 and 6A). The parts are Material 3
- * components. The add button and the actions of a card are not here, because this app cannot add or edit food yet.
+ * components. The button that adds food is on the tabs screen, and the empty state has a second one.
  *
  * The screen does not keep the [filter]. It calls [onFilterChange], because Home can also set the filter.
  */
@@ -102,6 +102,7 @@ fun MyFridgeScreen(
     state: FridgeUiState,
     filter: FoodFilter,
     onFilterChange: (FoodFilter) -> Unit,
+    onAddFood: () -> Unit,
     onTryAgain: () -> Unit,
     insets: PaddingValues,
     modifier: Modifier = Modifier,
@@ -148,7 +149,8 @@ fun MyFridgeScreen(
             LazyColumn(
                 Modifier.widthIn(max = Size.contentMax).fillMaxSize().testTag("my_fridge_screen"),
                 state = list,
-                contentPadding = PaddingValues(top = 12.dp, bottom = 16.dp),
+                // The space at the bottom keeps the last card clear of the button that adds food.
+                contentPadding = PaddingValues(top = 12.dp, bottom = 88.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 item(key = "header") {
@@ -162,7 +164,9 @@ fun MyFridgeScreen(
                     state is FridgeUiState.LoadFailed -> item(key = "failed") { LoadFailed(onTryAgain, Modifier.padding(side)) }
                     view == null -> item(key = "loading") { ListMessage(stringResource(R.string.loading), "loading") }
                     // All storage areas have no food, or the storage area of the tab has no food.
-                    view.areaFoodCount == 0 -> item(key = "none") { EmptyState(stringResource(R.string.no_items), "no_items") }
+                    view.areaFoodCount == 0 -> item(key = "none") {
+                        EmptyState(stringResource(R.string.no_items), "no_items") { AddFoodButton(onAddFood) }
+                    }
                     rows.isEmpty() -> item(key = "no_match") {
                         ListMessage(stringResource(R.string.list_no_match), "list_no_match") {
                             // The search field has its own button to clear the text.

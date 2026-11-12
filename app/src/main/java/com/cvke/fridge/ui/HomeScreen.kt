@@ -76,7 +76,7 @@ import java.time.LocalTime
  * Home, the first screen. Its contents are those of the Home screen of FridgeFriend (`app/(tabs)/index.tsx` in the
  * `basic_ff` repository): a greeting, a card with the totals, and the batches that need attention. The parts are
  * Material 3 components. The parts of FridgeFriend that need a function that this app does not have yet are not
- * here: the settings button, the sessions, and the add button. A tap on the number of expiring or expired batches
+ * here: the settings button and the sessions. The button that adds food is on the tabs screen. A tap on the number of expiring or expired batches
  * calls [onShowFreshness], and My Fridge then shows the food with that freshness.
  */
 @Composable
@@ -84,6 +84,7 @@ fun HomeScreen(
     state: FridgeUiState,
     onViewAll: () -> Unit,
     onShowFreshness: (Freshness) -> Unit,
+    onAddFood: () -> Unit,
     onTryAgain: () -> Unit,
     insets: PaddingValues,
     modifier: Modifier = Modifier,
@@ -107,7 +108,8 @@ fun HomeScreen(
             Modifier
                 .widthIn(max = Size.contentMax)
                 .fillMaxWidth()
-                .padding(top = insets.calculateTopPadding() + 24.dp, bottom = 24.dp),
+                // The space at the bottom keeps the content clear of the button that adds food.
+                .padding(top = insets.calculateTopPadding() + 24.dp, bottom = 88.dp),
         ) {
             Column(Modifier.padding(side)) {
                 Row(verticalAlignment = Alignment.Top) {
@@ -136,7 +138,7 @@ fun HomeScreen(
             if (state is FridgeUiState.LoadFailed) {
                 LoadFailed(onTryAgain, Modifier.padding(side))
             } else {
-                NeedsAttention(content, onViewAll, side)
+                NeedsAttention(content, onViewAll, onAddFood, side)
             }
         }
     }
@@ -252,7 +254,13 @@ private fun Metric(
 
 /** The group of the expired and the expiring batches, in a row that scrolls sideways. "View all" opens My Fridge. */
 @Composable
-private fun NeedsAttention(content: InventoryContent?, onViewAll: () -> Unit, side: PaddingValues, modifier: Modifier = Modifier) {
+private fun NeedsAttention(
+    content: InventoryContent?,
+    onViewAll: () -> Unit,
+    onAddFood: () -> Unit,
+    side: PaddingValues,
+    modifier: Modifier = Modifier,
+) {
     val scheme = MaterialTheme.colorScheme
     Column(modifier) {
         Row(Modifier.padding(side).padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -275,7 +283,8 @@ private fun NeedsAttention(content: InventoryContent?, onViewAll: () -> Unit, si
         Crossfade(phase, animationSpec = tween(Motion.ENTER_MILLIS, easing = Motion.standard), label = "attention") { shown ->
             when (shown) {
             AttentionPhase.LOADING -> Notice(stringResource(R.string.loading), "loading", Modifier.padding(side)) { BrandSpinner() }
-            AttentionPhase.NO_ITEMS -> EmptyState(stringResource(R.string.no_items), "no_items", Modifier.padding(side))
+            AttentionPhase.NO_ITEMS ->
+                EmptyState(stringResource(R.string.no_items), "no_items", Modifier.padding(side)) { AddFoodButton(onAddFood) }
             AttentionPhase.ALL_FRESH -> Card(
                 Modifier.padding(side).fillMaxWidth().semantics(mergeDescendants = true) {}.testTag("all_fresh"),
                 shape = MaterialTheme.shapes.large,

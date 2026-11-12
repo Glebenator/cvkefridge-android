@@ -3,6 +3,7 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 // The upload key stays out of Git. Set it in keystore.properties (Git ignores this file) or in CVKE_UPLOAD_*
@@ -73,6 +74,33 @@ android {
     }
 }
 
+/** Copies the table of foods of the shared specification into a folder that the build adds to the assets. */
+abstract class CopyFoodTable : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val source: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun copy() {
+        val target = outputDir.get().asFile
+        target.listFiles()?.forEach { it.deleteRecursively() }
+        source.get().asFile.copyTo(target.resolve("foods.json"), overwrite = true)
+    }
+}
+
+// The app reads `spec/foods.json` as the asset `foods.json`. The file is not in Git a second time.
+androidComponents {
+    onVariants { variant ->
+        val copy = tasks.register<CopyFoodTable>("copy${variant.name.replaceFirstChar(Char::uppercase)}FoodTable") {
+            source = rootProject.layout.projectDirectory.file("spec/foods.json")
+        }
+        variant.sources.assets?.addGeneratedSourceDirectory(copy, CopyFoodTable::outputDir)
+    }
+}
+
 dependencies {
     implementation(project(":core"))
     implementation(platform(libs.androidx.compose.bom))
@@ -80,6 +108,8 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.navigation3.runtime)
+    implementation(libs.androidx.navigation3.ui)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.material3)

@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -42,10 +44,10 @@ fun SampleNote(modifier: Modifier = Modifier) {
 
 /**
  * An empty state: the slice of the house brand above the [title]. It is for a screen or a group with no food, not
- * for a search or a filter with no result.
+ * for a search or a filter with no result. The [action] is below the title.
  */
 @Composable
-fun EmptyState(title: String, tag: String, modifier: Modifier = Modifier) {
+fun EmptyState(title: String, tag: String, modifier: Modifier = Modifier, action: @Composable () -> Unit = {}) {
     Column(
         modifier.fillMaxWidth().padding(vertical = 32.dp).testTag(tag),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -53,6 +55,17 @@ fun EmptyState(title: String, tag: String, modifier: Modifier = Modifier) {
         SliceComposition()
         Spacer(Modifier.height(16.dp))
         Text(title, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium)
+        action()
+    }
+}
+
+/** The button of an empty state that opens the form that adds food. */
+@Composable
+fun AddFoodButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    FilledTonalButton(onClick, modifier.padding(top = 16.dp).testTag("empty_add_food")) {
+        Icon(painterResource(R.drawable.ic_add), contentDescription = null, Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(stringResource(R.string.add_food))
     }
 }
 

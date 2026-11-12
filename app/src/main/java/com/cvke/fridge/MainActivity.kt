@@ -6,8 +6,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.runtime.getValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -19,10 +17,11 @@ import java.util.TimeZone
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-    private val changeLog get() = (application as FridgeApplication).changeLog
+    private val app get() = application as FridgeApplication
+    private val changeLog get() = app.changeLog
 
     private val viewModel: FridgeViewModel by viewModels {
-        viewModelFactory { initializer { FridgeViewModel(changeLog, ::today) } }
+        viewModelFactory { initializer { FridgeViewModel(changeLog, app.phoneId, app::readFoodTable, ::today) } }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,10 +29,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         if (savedInstanceState == null) applyDebugRequest(intent)
         setContent {
-            CvkeFridgeTheme {
-                val state by viewModel.state.collectAsStateWithLifecycle()
-                FridgeApp(state, onTryAgain = viewModel::load)
-            }
+            CvkeFridgeTheme { FridgeApp(viewModel) }
         }
     }
 

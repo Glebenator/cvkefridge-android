@@ -4,15 +4,28 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cvke.fridge.core.CalendarDate
 import com.cvke.fridge.core.Change
+import com.cvke.fridge.core.ChangeBody
+import com.cvke.fridge.core.FoodTable
 import com.cvke.fridge.core.Inventory
+import com.cvke.fridge.core.RejectionReason
 import com.cvke.fridge.data.ChangeLogStore
+import com.cvke.fridge.data.PhoneId
+import com.cvke.fridge.inventory.InventoryAction
+import com.cvke.fridge.inventory.InventoryActions
+import com.cvke.fridge.inventory.NewChanges
+import com.cvke.fridge.inventory.NoticeMessage
+import com.cvke.fridge.inventory.Planned
 import java.io.IOException
+import java.util.UUID
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /** What the screens show. */
@@ -23,24 +36,82 @@ sealed interface FridgeUiState {
     /** The change log could not be read. */
     data object LoadFailed : FridgeUiState
 
-    /** The inventory, for the date [today]. */
-    data class Ready(val content: InventoryContent, val today: CalendarDate) : FridgeUiState
+    /**
+     * The inventory, for the date [today].
+     *
+     * @property content What Home and My Fridge show.
+     * @property inventory The replay of the change log. The other screens and the forms read it.
+     * @property foods The table of foods.
+     * @property lastAreaId The storage area of the last batch that this phone added, or null.
+     */
+    data class Ready(
+        val content: InventoryContent,
+        val today: CalendarDate,
+        val inventory: Inventory,
+        val foods: FoodTable,
+        val lastAreaId: String?,
+    ) : FridgeUiState
 }
 
 /**
- * Reads the change log and gives the screens their content.
+ * A message for the person after an action, for the snackbar.
  *
+ * @property id A number that is different for each message.
+ * @property undo The action that undoes the action of the message, or null.
+ * @property retry The action to do again after a failed write, or null.
+ */
+data class Notice(val id: Long, val message: NoticeMessage, val undo: InventoryAction.Undo? = null, val retry: InventoryAction? = null)
+
+/** The state of the write of a form. The [token] names the form, so that a form does not read the result of another form. */
+sealed interface FormWrite {
+    data object Idle : FormWrite
+
+    data class Saving(val token: String) : FormWrite
+
+    /** The changes of the form are in the change log. */
+    data class Saved(val token: String) : FormWrite
+
+    /** Nothing was written. [reason] is the reason of the core, or null when the file could not be written. */
+    data class Failed(val token: String, val reason: RejectionReason?) : FormWrite
+}
+
+/**
+ * Reads the change log, gives the screens their content, and writes the changes of each action of the person.
+ *
+ * A write adds changes to the change log, and then the screens get the replay of the new log. The screens never show
+ * a result that is not in the log.
+ *
+ * @param readFoods Reads the table of foods.
  * @param today The date in the time zone of the device.
+ * @param now The instant of now, in milliseconds from 1970-01-01T00:00:00Z.
+ * @param newId Makes a random identifier for a product, a batch, a storage area, or a change.
  */
 class FridgeViewModel(
     private val changeLog: ChangeLogStore,
+    private val phoneId: PhoneId,
+    private val readFoods: suspend () -> FoodTable,
     private val today: () -> CalendarDate,
+    private val now: () -> Long = System::currentTimeMillis,
+    private val newId: () -> String = { UUID.randomUUID().toString() },
     private val work: CoroutineDispatcher = Dispatchers.Default,
 ) : ViewModel() {
     private val _state = MutableStateFlow<FridgeUiState>(FridgeUiState.Loading)
     val state: StateFlow<FridgeUiState> = _state.asStateFlow()
 
-    private var changes: List<Change>? = null
+    private val _notice = MutableStateFlow<Notice?>(null)
+
+    /** The message that the snackbar shows, or null. */
+    val notice: StateFlow<Notice?> = _notice.asStateFlow()
+
+    private val _formWrite = MutableStateFlow<FormWrite>(FormWrite.Idle)
+    val formWrite: StateFlow<FormWrite> = _formWrite.asStateFlow()
+
+    /** What the last read or write gave. One read or write runs at a time. */
+    private class Loaded(val changes: List<Change>, val inventory: Inventory, val foods: FoodTable, val origin: String)
+
+    private val mutex = Mutex()
+    private var loaded: Loaded? = null
+    private var noticeCount = 0L
 
     init {
         load()
@@ -50,14 +121,18 @@ class FridgeViewModel(
     fun load() {
         if (_state.value is FridgeUiState.LoadFailed) _state.value = FridgeUiState.Loading
         viewModelScope.launch {
-            _state.value = try {
-                val read = changeLog.read()
-                changes = read
-                ready(read)
-            } catch (_: IOException) {
-                FridgeUiState.LoadFailed
-            } catch (_: IllegalArgumentException) {
-                FridgeUiState.LoadFailed
+            mutex.withLock {
+                _state.value = try {
+                    val foods = loaded?.foods ?: readFoods()
+                    val origin = phoneId.get()
+                    val changes = changeLog.read()
+                    val inventory = withContext(work) { Inventory.replay(changes) }
+                    ready(Loaded(changes, inventory, foods, origin).also { loaded = it })
+                } catch (_: IOException) {
+                    FridgeUiState.LoadFailed
+                } catch (_: IllegalArgumentException) {
+                    FridgeUiState.LoadFailed
+                }
             }
         }
     }
@@ -65,14 +140,94 @@ class FridgeViewModel(
     /** Calculates the days left again when the date changed, for example after midnight. */
     fun refreshToday() {
         val shown = _state.value as? FridgeUiState.Ready ?: return
-        val read = changes ?: return
-        if (shown.today != today()) viewModelScope.launch { _state.value = ready(read) }
+        if (shown.today == today()) return
+        viewModelScope.launch { mutex.withLock { loaded?.let { _state.value = ready(it) } } }
     }
 
-    private suspend fun ready(changes: List<Change>): FridgeUiState.Ready = withContext(work) {
+    /**
+     * Does an action of the person: makes its changes, adds them to the change log, and gives the screens the new
+     * inventory. The result of an action with a [formToken] is in [formWrite]. The result of the other actions, and
+     * the message of each action, is in [notice]. The write continues when the screen that started it closes.
+     */
+    fun perform(action: InventoryAction, formToken: String? = null) {
+        if (formToken != null) _formWrite.value = FormWrite.Saving(formToken)
+        viewModelScope.launch {
+            val result = mutex.withLock { write(action) }
+            if (formToken != null) {
+                _formWrite.value = when (result) {
+                    is WriteResult.Done -> FormWrite.Saved(formToken)
+                    is WriteResult.Refused -> FormWrite.Failed(formToken, result.reason)
+                    WriteResult.Failed -> FormWrite.Failed(formToken, null)
+                }
+            }
+            val notice = when (result) {
+                is WriteResult.Done -> result.message?.let { message ->
+                    Notice(++noticeCount, message, undo = InventoryAction.Undo(result.changeIds).takeIf { result.undoable })
+                }
+                // A form shows its failed write on the form.
+                is WriteResult.Refused -> Notice(++noticeCount, NoticeMessage.Refused(result.reason)).takeIf { formToken == null }
+                WriteResult.Failed -> Notice(++noticeCount, NoticeMessage.SaveFailed, retry = action).takeIf { formToken == null }
+            }
+            if (notice != null) _notice.value = notice
+        }
+    }
+
+    /** The snackbar closed the message. */
+    fun noticeShown(id: Long) = _notice.update { if (it?.id == id) null else it }
+
+    /** The form read the result of its write. */
+    fun formWriteRead(token: String) = _formWrite.update { current ->
+        val done = current is FormWrite.Saved && current.token == token || current is FormWrite.Failed && current.token == token
+        if (done) FormWrite.Idle else current
+    }
+
+    private sealed interface WriteResult {
+        data class Done(val changeIds: List<String>, val message: NoticeMessage?, val undoable: Boolean) : WriteResult
+
+        data class Refused(val reason: RejectionReason) : WriteResult
+
+        data object Failed : WriteResult
+    }
+
+    private suspend fun write(action: InventoryAction): WriteResult {
+        val current = loaded ?: return WriteResult.Failed
         val date = today()
-        val sample = changes.any { it.origin == SAMPLE_ORIGIN }
-        FridgeUiState.Ready(InventoryContent.of(Inventory.replay(changes), date, sample), date)
+        val planned = when (val plan = InventoryActions.plan(action, current.inventory, date, newId)) {
+            is Planned.Refused -> return WriteResult.Refused(plan.reason)
+            is Planned.Changes -> plan
+        }
+        val added = NewChanges.stamp(planned.bodies, current.changes, now(), current.origin, newId)
+        val changes = current.changes + added
+        // The replay runs before the write. A change that the core rejects does not go into the change log.
+        val inventory = withContext(work) { Inventory.replay(changes) }
+        NewChanges.rejection(current.inventory, inventory)?.let { return WriteResult.Refused(it) }
+        try {
+            changeLog.append(added)
+        } catch (_: IOException) {
+            return WriteResult.Failed
+        } catch (_: IllegalArgumentException) {
+            return WriteResult.Failed
+        }
+        val next = Loaded(changes, inventory, current.foods, current.origin)
+        loaded = next
+        _state.value = ready(next)
+        return WriteResult.Done(added.map(Change::id), planned.message, planned.undoable)
+    }
+
+    private suspend fun ready(loaded: Loaded): FridgeUiState.Ready = withContext(work) {
+        val date = today()
+        val sample = loaded.changes.any { it.origin == SAMPLE_ORIGIN }
+        val areas = loaded.inventory.storageAreas.mapTo(HashSet()) { it.id }
+        val lastAdded = loaded.changes
+            .filter { it.origin == loaded.origin && it.body is ChangeBody.BatchAdded }
+            .maxWithOrNull(compareBy<Change> { it.at }.thenBy { it.id })
+        FridgeUiState.Ready(
+            content = InventoryContent.of(loaded.inventory, date, sample),
+            today = date,
+            inventory = loaded.inventory,
+            foods = loaded.foods,
+            lastAreaId = (lastAdded?.body as? ChangeBody.BatchAdded)?.batch?.storageAreaId?.takeIf { it in areas },
+        )
     }
 
     companion object {

@@ -1,92 +1,141 @@
 package com.cvke.fridge.ui
 
-import androidx.activity.compose.BackHandler
-import androidx.annotation.DrawableRes
-import androidx.annotation.StringRes
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Text
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.saveable.rememberSaveableStateHolder
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.ui.NavDisplay
 import com.cvke.fridge.R
+import com.cvke.fridge.core.Outcome
+import com.cvke.fridge.inventory.InventoryAction
+import com.cvke.fridge.inventory.NoticeMessage
+import com.cvke.fridge.ui.theme.Motion
 
-/** The tabs of the app, with the names of FridgeFriend. The icon of the selected tab is filled. */
-enum class Tab(
-    @param:DrawableRes val icon: Int,
-    @param:DrawableRes val selectedIcon: Int,
-    @param:StringRes val label: Int,
-    val tag: String,
-) {
-    HOME(R.drawable.ic_home_outline, R.drawable.ic_home, R.string.tab_home, "tab_home"),
-    MY_FRIDGE(R.drawable.ic_fridge_outline, R.drawable.ic_fridge, R.string.tab_my_fridge, "tab_my_fridge"),
+/**
+ * The app: the back stack of the screens, and the snackbar for the result of an action. The first screen has the two
+ * tabs. The other screens open above the tabs, with no navigation bar, and the system back gesture closes them with
+ * the preview of the screen below. The back stack stays when Android stops the app in the background.
+ *
+ * The screens get the state of the view model and call it for each action. No screen keeps a copy of the inventory.
+ */
+@Composable
+fun FridgeApp(viewModel: FridgeViewModel) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val formWrite by viewModel.formWrite.collectAsStateWithLifecycle()
+    val notice by viewModel.notice.collectAsStateWithLifecycle()
+    val snackbar = remember { SnackbarHostState() }
+    NoticeSnackbar(notice, snackbar, onAction = viewModel::perform, onShown = viewModel::noticeShown)
+
+    val backStack = rememberNavBackStack(Screen.Tabs)
+    fun open(screen: Screen) {
+        // Two fast taps do not open the same screen two times.
+        if (backStack.lastOrNull() != screen) backStack.add(screen)
+    }
+    fun close(screen: Screen) {
+        backStack.remove(screen)
+    }
+    val forward = screenChange(towardsEnd = true)
+    val back = screenChange(towardsEnd = false)
+    NavDisplay(
+        backStack = backStack,
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface),
+        onBack = { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) },
+        transitionSpec = { forward },
+        popTransitionSpec = { back },
+        predictivePopTransitionSpec = { back },
+        entryProvider = entryProvider<NavKey> {
+            entry<Screen.Tabs> {
+                TabsScreen(
+                    state = state,
+                    snackbar = snackbar,
+                    onAddFood = { open(Screen.AddFood(openAreaId = it)) },
+                    onTryAgain = viewModel::load,
+                )
+            }
+            entry<Screen.AddFood> { screen ->
+                AddFoodScreen(
+                    screen = screen,
+                    state = state,
+                    formWrite = formWrite,
+                    snackbar = snackbar,
+                    onPerform = viewModel::perform,
+                    onFormWriteRead = viewModel::formWriteRead,
+                    onManageAreas = null,
+                    onTryAgain = viewModel::load,
+                    onClose = { close(screen) },
+                )
+            }
+        },
+    )
 }
 
 /**
- * The app: the screen of the selected tab, and the Material navigation bar below it. A tab change is instant. Each
- * tab keeps its scroll position, and My Fridge keeps its filters, its search text, and its sort order. Back on My
- * Fridge goes to Home.
- *
- * The filter of My Fridge is here, because Home opens My Fridge with a filter: "View all" shows all food, and the
- * number of expiring or expired batches shows the food with that freshness in all storage areas.
+ * The change from one screen to the next: a short slide with a fade, in the motion values of the design system. A
+ * screen that opens comes from the end edge. A screen that closes goes back to it.
+ */
+private fun screenChange(towardsEnd: Boolean): ContentTransform {
+    val spec = tween<Float>(Motion.ENTER_MILLIS, easing = Motion.standard)
+    val slide = tween<androidx.compose.ui.unit.IntOffset>(Motion.ENTER_MILLIS, easing = Motion.standard)
+    return if (towardsEnd) {
+        (slideInHorizontally(slide) { it / 8 } + fadeIn(spec)) togetherWith fadeOut(spec)
+    } else {
+        fadeIn(spec) togetherWith (slideOutHorizontally(slide) { it / 8 } + fadeOut(spec))
+    }
+}
+
+/**
+ * Shows the message of the view model in the snackbar. A message for an action that the person can undo has the
+ * button "Undo". A message for a failed write has the button "Try again". A new message replaces the one on the
+ * screen.
  */
 @Composable
-fun FridgeApp(state: FridgeUiState, onTryAgain: () -> Unit) {
-    var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
-    var filter by rememberSaveable(stateSaver = FoodFilterSaver) { mutableStateOf(FoodFilter()) }
-    val screens = rememberSaveableStateHolder()
-    fun showMyFridge(with: FoodFilter) {
-        filter = with
-        tab = Tab.MY_FRIDGE
+private fun NoticeSnackbar(notice: Notice?, snackbar: SnackbarHostState, onAction: (InventoryAction) -> Unit, onShown: (Long) -> Unit) {
+    val text = notice?.let { noticeText(it.message) }
+    val action = notice?.undo ?: notice?.retry
+    val label = when {
+        notice?.undo != null -> stringResource(R.string.action_undo)
+        notice?.retry != null -> stringResource(R.string.action_try_again)
+        else -> null
     }
-    BackHandler(enabled = tab != Tab.HOME) { tab = Tab.HOME }
+    LaunchedEffect(notice?.id) {
+        if (notice == null || text == null) return@LaunchedEffect
+        val result = snackbar.showSnackbar(text, label, duration = if (label == null) SnackbarDuration.Short else SnackbarDuration.Long)
+        if (result == SnackbarResult.ActionPerformed && action != null) onAction(action)
+        onShown(notice.id)
+    }
+}
 
-    // The navigation bar is at the bottom edge, so the screens get the insets of the other three edges.
-    val insets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal).asPaddingValues()
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
-        Box(Modifier.weight(1f)) {
-            screens.SaveableStateProvider(tab.name) {
-                when (tab) {
-                    Tab.HOME -> HomeScreen(
-                        state,
-                        onViewAll = { showMyFridge(FoodFilter()) },
-                        onShowFreshness = { showMyFridge(FoodFilter(freshness = setOf(it))) },
-                        onTryAgain = onTryAgain,
-                        insets = insets,
-                    )
-                    Tab.MY_FRIDGE -> MyFridgeScreen(state, filter, onFilterChange = { filter = it }, onTryAgain = onTryAgain, insets = insets)
-                }
-            }
-        }
-        NavigationBar {
-            Tab.entries.forEach { entry ->
-                val selected = entry == tab
-                NavigationBarItem(
-                    selected = selected,
-                    onClick = { tab = entry },
-                    icon = { Icon(painterResource(if (selected) entry.selectedIcon else entry.icon), contentDescription = null) },
-                    modifier = Modifier.testTag(entry.tag),
-                    label = { Text(stringResource(entry.label)) },
-                )
-            }
-        }
-    }
+@Composable
+private fun noticeText(message: NoticeMessage): String = when (message) {
+    is NoticeMessage.Added -> stringResource(R.string.notice_added, message.name)
+    is NoticeMessage.Taken -> stringResource(
+        if (message.outcome == Outcome.USED) R.string.notice_used else R.string.notice_thrown_away,
+        quantityText(message.quantity, message.unit),
+        message.name,
+    )
+    is NoticeMessage.FoodDeleted -> stringResource(R.string.notice_deleted, message.name)
+    is NoticeMessage.BatchDeleted -> pluralStringResource(R.plurals.notice_batches_deleted, message.count, message.count, message.name)
+    is NoticeMessage.StorageAreaDeleted -> stringResource(R.string.notice_deleted, message.name)
+    NoticeMessage.SaveFailed -> stringResource(R.string.save_failed)
+    is NoticeMessage.Refused -> stringResource(message.reason.message())
 }
