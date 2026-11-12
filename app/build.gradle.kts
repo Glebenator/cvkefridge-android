@@ -30,7 +30,8 @@ android {
         versionCode = 1
         versionName = "0.1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // The runner of the device tests replaces the internet with a fake server. See DeviceTestRunner.kt.
+        testInstrumentationRunner = "com.cvke.fridge.DeviceTestRunner"
     }
 
     signingConfigs {

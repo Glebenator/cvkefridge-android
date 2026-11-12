@@ -85,7 +85,7 @@ import com.cvke.fridge.ui.theme.Size
  * category, a sort control, and one card for each food in each storage area. The storage areas are tabs below the top
  * app bar, and the menu of the top app bar opens the screen that creates and edits them. The category and the freshness are in one row of chips that does not scroll sideways
  * (`docs/research/competitor-apps.md` in the cvkefridge repository, sections 6 and 6A). The parts are Material 3
- * components. The button that adds food is on the tabs screen, and the empty state has a second one. A card records
+ * components. The buttons that add food are on the tabs screen, and the empty state has them also. A card records
  * its food as used or as thrown away (see [FoodCard]).
  *
  * The screen does not keep the [filter]. It calls [onFilterChange], because Home can also set the filter.
@@ -97,6 +97,7 @@ fun MyFridgeScreen(
     filter: FoodFilter,
     onFilterChange: (FoodFilter) -> Unit,
     onAddFood: () -> Unit,
+    onScan: () -> Unit,
     onOpenFood: (productId: String) -> Unit,
     onManageAreas: () -> Unit,
     onPerform: (InventoryAction) -> Unit,
@@ -161,8 +162,8 @@ fun MyFridgeScreen(
             LazyColumn(
                 Modifier.widthIn(max = Size.contentMax).fillMaxSize().testTag("my_fridge_screen"),
                 state = list,
-                // The space at the bottom keeps the last card clear of the button that adds food.
-                contentPadding = PaddingValues(top = 12.dp, bottom = 88.dp),
+                // The space at the bottom keeps the last card clear of the two buttons that add food.
+                contentPadding = PaddingValues(top = 12.dp, bottom = Size.addButtonsClearance),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 item(key = "header") {
@@ -177,7 +178,7 @@ fun MyFridgeScreen(
                     view == null -> item(key = "loading") { ListMessage(stringResource(R.string.loading), "loading") }
                     // All storage areas have no food, or the storage area of the tab has no food.
                     view.areaFoodCount == 0 -> item(key = "none") {
-                        EmptyState(stringResource(R.string.no_items), "no_items") { AddFoodButton(onAddFood) }
+                        EmptyState(stringResource(R.string.no_items), "no_items") { AddFoodButtons(onScan, onAddFood) }
                     }
                     rows.isEmpty() -> item(key = "no_match") {
                         ListMessage(stringResource(R.string.list_no_match), "list_no_match") {

@@ -3,7 +3,9 @@ package com.cvke.fridge.ui
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
@@ -11,25 +13,34 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.cvke.fridge.R
 import com.cvke.fridge.inventory.InventoryAction
 
@@ -45,20 +56,26 @@ enum class Tab(
 }
 
 /**
- * Home and My Fridge: the screen of the selected tab, the Material navigation bar below it, and the button that adds
- * food. A tab change is instant. Each tab keeps its scroll position, and My Fridge keeps its filters, its search
+ * Home and My Fridge: the screen of the selected tab, the Material navigation bar below it, and the two buttons that
+ * add food. A tab change is instant. Each tab keeps its scroll position, and My Fridge keeps its filters, its search
  * text, and its sort order, also while another screen is above the tabs. Back on My Fridge goes to Home.
+ *
+ * The two ways to add food are each one tap: the floating action button opens the scanner, and the small floating
+ * action button above it opens the form for food with no barcode. A menu would add a tap to each way. A long press on
+ * a button shows its name.
  *
  * The filter of My Fridge is here, because Home opens My Fridge with a filter: "View all" shows all food, and the
  * number of expiring or expired batches shows the food with that freshness in all storage areas.
  *
  * @param onAddFood Opens the form that adds food. It gets the storage area of the tab of My Fridge that is open.
+ * @param onScan Opens the scanner. It gets the storage area of the tab of My Fridge that is open.
  */
 @Composable
 fun TabsScreen(
     state: FridgeUiState,
     snackbar: SnackbarHostState,
     onAddFood: (openAreaId: String?) -> Unit,
+    onScan: (openAreaId: String?) -> Unit,
     onOpenFood: (productId: String) -> Unit,
     onManageAreas: () -> Unit,
     onPerform: (InventoryAction) -> Unit,
@@ -72,7 +89,9 @@ fun TabsScreen(
         tab = Tab.MY_FRIDGE
     }
     BackHandler(enabled = tab != Tab.HOME) { tab = Tab.HOME }
-    fun addFood() = onAddFood(filter.areaId.takeIf { tab == Tab.MY_FRIDGE })
+    fun openArea() = filter.areaId.takeIf { tab == Tab.MY_FRIDGE }
+    fun addFood() = onAddFood(openArea())
+    fun scan() = onScan(openArea())
 
     // The navigation bar is at the bottom edge, so the screens get the insets of the other three edges.
     val insets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal).asPaddingValues()
@@ -93,12 +112,8 @@ fun TabsScreen(
         },
         snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButton = {
-            // The button is there when the inventory is loaded. Before that, the form cannot save.
-            if (state is FridgeUiState.Ready) {
-                FloatingActionButton(onClick = ::addFood, Modifier.testTag("add_food")) {
-                    Icon(painterResource(R.drawable.ic_add), contentDescription = stringResource(R.string.add_food))
-                }
-            }
+            // The buttons are there when the inventory is loaded. Before that, the form cannot save.
+            if (state is FridgeUiState.Ready) AddButtons(onScan = ::scan, onAddByHand = ::addFood)
         },
         containerColor = MaterialTheme.colorScheme.surface,
         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
@@ -111,6 +126,7 @@ fun TabsScreen(
                         onViewAll = { showMyFridge(FoodFilter()) },
                         onShowFreshness = { showMyFridge(FoodFilter(freshness = setOf(it))) },
                         onAddFood = ::addFood,
+                        onScan = ::scan,
                         onOpenFood = onOpenFood,
                         onTryAgain = onTryAgain,
                         insets = insets,
@@ -120,6 +136,7 @@ fun TabsScreen(
                         filter,
                         onFilterChange = { filter = it },
                         onAddFood = ::addFood,
+                        onScan = ::scan,
                         onOpenFood = onOpenFood,
                         onManageAreas = onManageAreas,
                         onPerform = onPerform,
@@ -127,6 +144,44 @@ fun TabsScreen(
                         insets = insets,
                     )
                 }
+            }
+        }
+    }
+}
+
+/**
+ * The floating action button that opens the scanner, and the small floating action button above it that opens the
+ * form. Each has a tooltip with its name.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddButtons(onScan: () -> Unit, onAddByHand: () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    @Composable
+    fun WithTooltip(label: String, button: @Composable () -> Unit) {
+        TooltipBox(
+            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Start),
+            tooltip = { PlainTooltip { Text(label) } },
+            state = rememberTooltipState(),
+            content = button,
+        )
+    }
+    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        val byHand = stringResource(R.string.action_add_by_hand)
+        WithTooltip(byHand) {
+            SmallFloatingActionButton(
+                onClick = onAddByHand,
+                modifier = Modifier.testTag("add_food"),
+                containerColor = scheme.secondaryContainer,
+                contentColor = scheme.onSecondaryContainer,
+            ) {
+                Icon(painterResource(R.drawable.ic_pencil_plus), contentDescription = byHand)
+            }
+        }
+        val scan = stringResource(R.string.action_scan_barcode)
+        WithTooltip(scan) {
+            FloatingActionButton(onClick = onScan, Modifier.testTag("scan_barcode")) {
+                Icon(painterResource(R.drawable.ic_barcode_scan), contentDescription = scan)
             }
         }
     }

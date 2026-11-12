@@ -1,7 +1,9 @@
 package com.cvke.fridge.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -10,9 +12,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -59,13 +63,24 @@ fun EmptyState(title: String, tag: String, modifier: Modifier = Modifier, action
     }
 }
 
-/** The button of an empty state that opens the form that adds food. */
+/** The buttons of an empty state that open the scanner and the form that adds food by hand. */
 @Composable
-fun AddFoodButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    FilledTonalButton(onClick, modifier.padding(top = 16.dp).testTag("empty_add_food")) {
-        Icon(painterResource(R.drawable.ic_add), contentDescription = null, Modifier.size(18.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(stringResource(R.string.add_food))
+fun AddFoodButtons(onScan: () -> Unit, onAddByHand: () -> Unit, modifier: Modifier = Modifier) {
+    FlowRow(
+        modifier.padding(top = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FilledTonalButton(onScan, Modifier.testTag("empty_scan")) {
+            Icon(painterResource(R.drawable.ic_barcode_scan), contentDescription = null, Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+            Text(stringResource(R.string.action_scan_barcode))
+        }
+        OutlinedButton(onAddByHand, Modifier.testTag("empty_add_food")) {
+            Icon(painterResource(R.drawable.ic_pencil_plus), contentDescription = null, Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+            Text(stringResource(R.string.action_add_by_hand))
+        }
     }
 }
 

@@ -77,6 +77,7 @@ fun FridgeApp(viewModel: FridgeViewModel) {
                     state = state,
                     snackbar = snackbar,
                     onAddFood = { open(Screen.AddFood(openAreaId = it)) },
+                    onScan = { open(Screen.Scan(openAreaId = it)) },
                     onOpenFood = { open(Screen.Food(it)) },
                     onManageAreas = { open(Screen.StorageAreas) },
                     onPerform = viewModel::perform,

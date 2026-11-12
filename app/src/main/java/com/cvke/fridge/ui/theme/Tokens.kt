@@ -124,4 +124,10 @@ internal val DarkStatus = StatusColors(
 object Size {
     /** The maximum width of the content of a screen, so that lines stay short on a wide screen. */
     val contentMax = 720.dp
+
+    /**
+     * The space at the bottom of a list on the tabs, so that the last item can scroll above the two buttons that add
+     * food: the margin of 16 dp, the button of 56 dp, the space of 16 dp, the small button of 40 dp, and 16 dp.
+     */
+    val addButtonsClearance = 144.dp
 }

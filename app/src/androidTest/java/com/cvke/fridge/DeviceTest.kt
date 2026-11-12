@@ -8,6 +8,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.cvke.fridge.core.CalendarDate
 import com.cvke.fridge.core.Change
 import com.cvke.fridge.core.Inventory
+import java.io.File
 import java.util.TimeZone
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -16,17 +17,20 @@ import org.junit.Rule
 /**
  * The base of the device tests. A test writes the change log first and then starts the activity, so the screens read
  * the log through the production code path, and the test waits until the inventory is on the screen. Each write of
- * the app goes to the real change log on the device.
+ * the app goes to the real change log on the device. The product lookup goes to [FakeServer], not to the internet.
  */
 abstract class DeviceTest {
     @get:Rule
     val rule = createEmptyComposeRule()
 
-    private val changeLog get() = ApplicationProvider.getApplicationContext<FridgeApplication>().changeLog
+    private val app get() = ApplicationProvider.getApplicationContext<FridgeApplication>()
+    private val changeLog get() = app.changeLog
     protected var scenario: ActivityScenario<MainActivity>? = null
 
     protected fun start(changes: List<Change>) {
         runBlocking { changeLog.replace(changes) }
+        // The cache of an earlier run of the tests is not used. Each test of this run looks up its own barcodes.
+        File(app.filesDir, "product-lookups.json").delete()
         scenario = ActivityScenario.launch(MainActivity::class.java)
         // The app reads the change log after the start. The button that adds food is there when the inventory is loaded.
         waitFor(hasTestTag("add_food"))
@@ -53,6 +57,7 @@ abstract class DeviceTest {
     fun close() {
         scenario?.close()
         runBlocking { changeLog.replace(emptyList()) }
+        FakeServer.reset()
     }
 
     private companion object {
