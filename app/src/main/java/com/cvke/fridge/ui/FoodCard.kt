@@ -2,6 +2,7 @@ package com.cvke.fridge.ui
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -108,26 +109,27 @@ fun FoodCard(row: FoodRow, onOpen: () -> Unit, onAction: (CardAction) -> Unit, m
         val quantity = quantityText(row.quantity, row.unit)
         val expiry = expiryText(row.daysLeft, row.expiry)
         Card(
-            onClick = onOpen,
-            Modifier
-                .fillMaxWidth()
-                .semantics {
-                    customActions = listOf(
-                        CustomAccessibilityAction(usedLabel) {
-                            onAction(CardAction.USE)
-                            true
-                        },
-                        CustomAccessibilityAction(thrownAwayLabel) {
-                            onAction(CardAction.THROW_AWAY)
-                            true
-                        },
-                    )
-                }
-                .testTag("food_${row.key}"),
+            Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
             colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainerLow),
         ) {
+            // The list item is one item for screen readers. The tap, the actions, and the tag of the card are on it.
             ListItem(
+                modifier = Modifier
+                    .clickable(onClick = onOpen)
+                    .semantics {
+                        customActions = listOf(
+                            CustomAccessibilityAction(usedLabel) {
+                                onAction(CardAction.USE)
+                                true
+                            },
+                            CustomAccessibilityAction(thrownAwayLabel) {
+                                onAction(CardAction.THROW_AWAY)
+                                true
+                            },
+                        )
+                    }
+                    .testTag("food_${row.key}"),
                 headlineContent = { Text(row.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 supportingContent = {
                     Column {

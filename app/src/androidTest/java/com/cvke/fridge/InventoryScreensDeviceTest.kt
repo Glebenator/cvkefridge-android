@@ -7,7 +7,6 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -16,43 +15,10 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
-import androidx.test.core.app.ActivityScenario
-import androidx.test.core.app.ApplicationProvider
-import com.cvke.fridge.core.CalendarDate
-import com.cvke.fridge.core.Change
-import java.util.TimeZone
-import kotlinx.coroutines.runBlocking
-import org.junit.After
-import org.junit.Rule
 import org.junit.Test
 
-/**
- * The two screens with the real change log on the device. Each test writes the log first and then starts the activity,
- * so the screens read it through the production code path.
- */
-class InventoryScreensDeviceTest {
-    @get:Rule
-    val rule = createEmptyComposeRule()
-
-    private val changeLog get() = ApplicationProvider.getApplicationContext<FridgeApplication>().changeLog
-    private var scenario: ActivityScenario<MainActivity>? = null
-
-    private fun start(changes: List<Change>) {
-        runBlocking { changeLog.replace(changes) }
-        scenario = ActivityScenario.launch(MainActivity::class.java)
-    }
-
-    private fun today(): CalendarDate {
-        val now = System.currentTimeMillis()
-        return checkNotNull(CalendarDate.ofInstant(now, TimeZone.getDefault().getOffset(now) / 1000))
-    }
-
-    @After
-    fun close() {
-        scenario?.close()
-        runBlocking { changeLog.replace(emptyList()) }
-    }
-
+/** Home and My Fridge with a change log that the test wrote: what the two screens show, and the filters. */
+class InventoryScreensDeviceTest : DeviceTest() {
     @Test
     fun anEmptyInventoryShowsZeroOnHomeAndNoCardOnMyFridge() {
         start(emptyList())

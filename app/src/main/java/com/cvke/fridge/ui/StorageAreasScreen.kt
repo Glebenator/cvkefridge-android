@@ -1,5 +1,6 @@
 package com.cvke.fridge.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -175,9 +176,14 @@ private fun AreaCard(area: StorageArea, foodCount: Int, onEdit: () -> Unit, onDe
         pluralStringResource(R.plurals.item_count, foodCount, foodCount),
         if (area.fixed) stringResource(R.string.storage_area_fixed) else null,
     ).joinToString(" $separator ")
-    val colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainerLow)
-    val content: @Composable () -> Unit = {
+    Card(
+        modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainerLow),
+    ) {
+        // The list item is one item for screen readers. The tap and the tag of the card are on it.
         ListItem(
+            modifier = (if (area.fixed) Modifier else Modifier.clickable(onClick = onEdit)).testTag("area_card_${area.id}"),
             headlineContent = { Text(area.name) },
             supportingContent = { Text(detail) },
             trailingContent = if (area.fixed) null else {
@@ -185,12 +191,6 @@ private fun AreaCard(area: StorageArea, foodCount: Int, onEdit: () -> Unit, onDe
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         )
-    }
-    val cardModifier = modifier.fillMaxWidth().testTag("area_card_${area.id}")
-    if (area.fixed) {
-        Card(cardModifier, shape = MaterialTheme.shapes.large, colors = colors) { content() }
-    } else {
-        Card(onClick = onEdit, cardModifier, shape = MaterialTheme.shapes.large, colors = colors) { content() }
     }
 }
 
