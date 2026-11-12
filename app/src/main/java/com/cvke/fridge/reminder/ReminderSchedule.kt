@@ -33,6 +33,12 @@ object ReminderSchedule {
         return if (lastDate != today && triggerAt(today, time, zone).isAfter(now)) today else today.plusDays(1)
     }
 
+    /**
+     * The date of the last reminder, or null when it is after today. A date after today comes from a clock that went
+     * back. It must not stop the reminder of that date when the date comes.
+     */
+    fun knownLastDate(lastDate: LocalDate?, now: Instant, zone: ZoneId): LocalDate? = lastDate?.takeIf { it <= dateOf(now, zone) }
+
     /** The date of the next reminder after the reminder of [ranOn], the date of the device when it ran. */
     fun dateAfterRun(ranOn: LocalDate): LocalDate = ranOn.plusDays(1)
 

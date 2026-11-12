@@ -87,6 +87,15 @@ class ReminderScheduleTest {
     }
 
     @Test
+    fun aLastDateAfterTodayFromAClockThatWentBackIsForgotten() {
+        val now = at("2026-11-12T16:30", denver)
+        assertEquals(null, ReminderSchedule.knownLastDate(day("2026-11-13"), now, denver))
+        assertEquals(day("2026-11-12"), ReminderSchedule.knownLastDate(day("2026-11-12"), now, denver))
+        // With the last date forgotten, the reminder of 13 November comes on 13 November.
+        assertEquals(day("2026-11-13"), ReminderSchedule.restoredDate(day("2026-11-14"), now, denver, LocalTime.of(16, 20), null))
+    }
+
+    @Test
     fun noStoredDateGivesTheFirstDate() {
         assertEquals(day("2026-11-12"), ReminderSchedule.restoredDate(null, at("2026-11-12T07:00", berlin), berlin, nine, null))
     }

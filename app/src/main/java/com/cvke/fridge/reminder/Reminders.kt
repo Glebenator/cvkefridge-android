@@ -109,10 +109,7 @@ class Reminders(
     suspend fun restore(newZone: ZoneId? = null) = locked {
         val current = read()
         if (!current.enabled) return@locked
-        val zone = newZone ?: zone()
-        val next = ReminderSchedule.restoredDate(current.next, now(), zone, current.time, current.last)
-        val settings = update { it.copy(nextDate = next.toString()) }
-        setAlarm(settings, zone)
+        restoreLocked(current, now(), newZone ?: zone())
     }
 
     /**
@@ -129,7 +126,7 @@ class Reminders(
         val zone = zone()
         val today = ReminderSchedule.dateOf(instant, zone)
         val due = current.next?.let { !ReminderSchedule.triggerAt(it, current.time, zone).isAfter(instant) } ?: true
-        if (!due || current.last == today) {
+        if (!due || ReminderSchedule.knownLastDate(current.last, instant, zone) == today) {
             restoreLocked(current, instant, zone)
             return@locked
         }
@@ -177,8 +174,9 @@ class Reminders(
     private suspend fun <T> locked(operation: suspend () -> T): T = withContext(work) { mutex.withLock { operation() } }
 
     private suspend fun restoreLocked(current: ReminderSettings, instant: Instant, zone: ZoneId) {
-        val next = ReminderSchedule.restoredDate(current.next, instant, zone, current.time, current.last)
-        setAlarm(update { it.copy(nextDate = next.toString()) }, zone)
+        val last = ReminderSchedule.knownLastDate(current.last, instant, zone)
+        val next = ReminderSchedule.restoredDate(current.next, instant, zone, current.time, last)
+        setAlarm(update { it.copy(nextDate = next.toString(), lastDate = last?.toString()) }, zone)
     }
 
     private fun setAlarm(settings: ReminderSettings, zone: ZoneId) {
