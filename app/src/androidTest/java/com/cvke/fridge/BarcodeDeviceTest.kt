@@ -1,15 +1,14 @@
 package com.cvke.fridge
 
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import com.cvke.fridge.core.Category
 import com.cvke.fridge.core.MeasureUnit
@@ -33,8 +32,8 @@ class BarcodeDeviceTest : DeviceTest() {
     }
 
     private fun typeBarcode(barcode: String) {
-        // The snackbar of the last save can be above the button, so the test uses the click action of the button.
-        rule.onNodeWithTag("type_barcode").performSemanticsAction(SemanticsActions.OnClick)
+        // The snackbar of the last save is above the panel, so a tap on the button reaches it.
+        rule.onNodeWithTag("type_barcode").performClick()
         waitFor(hasTestTag("field_barcode"))
         rule.onNodeWithTag("field_barcode").performTextInput(barcode)
         rule.onNodeWithTag("barcode_look_up").performClick()
@@ -76,6 +75,10 @@ class BarcodeDeviceTest : DeviceTest() {
         rule.onNodeWithTag("save_scan_next").performClick()
         waitFor(hasTestTag("scan_screen"))
         waitFor(hasText("Nutella added"))
+        // The snackbar is above the panel: "Undo" is there, and the buttons of the panel are not under the snackbar.
+        val undo = rule.onNodeWithText("Undo").assertIsDisplayed().getUnclippedBoundsInRoot()
+        val panel = rule.onNodeWithTag("scan_panel").getUnclippedBoundsInRoot()
+        assertTrue("The snackbar covers the panel", undo.bottom <= panel.top)
         assertEquals(1, FakeServer.requests.size)
         assertEquals(2, inventory().batches.count { it.productId == product.id })
     }

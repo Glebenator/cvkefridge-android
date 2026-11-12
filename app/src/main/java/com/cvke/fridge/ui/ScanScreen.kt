@@ -48,6 +48,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -134,6 +135,9 @@ private enum class CameraAccess {
  *
  * A read gives a short vibration, and screen readers hear the lookup. One package gives one scan
  * ([ScanDebouncer]). During a lookup and after a failed lookup the camera does not read.
+ *
+ * The snackbar is at the bottom of the camera area, above the panel. After "Save and scan next", the message "… added"
+ * with "Undo" then does not cover the buttons of the panel, and "Undo" stays available.
  */
 @Composable
 fun ScanScreen(
@@ -192,7 +196,8 @@ fun ScanScreen(
     SubScreen(
         title = stringResource(R.string.scan_title),
         onBack = onClose,
-        snackbar = snackbar,
+        // The snackbar is above the panel, not at the bottom edge of the screen.
+        snackbar = null,
         tag = "scan_screen",
         close = true,
         actions = {
@@ -223,6 +228,15 @@ fun ScanScreen(
                     } else {
                         AccessMessage(access, requestCamera)
                     }
+                    // On a wide screen the camera area goes to the bottom edge, so the snackbar keeps clear of the
+                    // navigation bar there.
+                    SnackbarHost(
+                        snackbar,
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .then(if (wide) Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)) else Modifier)
+                            .testTag("scan_snackbar"),
+                    )
                 }
             }
             val panel = @Composable { modifier: Modifier ->

@@ -95,15 +95,15 @@ import java.time.format.FormatStyle
 
 /**
  * A screen above the tabs: a top app bar with the [title] and a button that goes back, the [content], and the
- * snackbar. The screen stays above the keyboard. A form has a close button ([close]), and its buttons are in the
- * [bottomBar].
+ * snackbar at the bottom edge. The screen stays above the keyboard. A form has a close button ([close]), and its
+ * buttons are in the [bottomBar]. A screen that puts the [snackbar] in a different place gives null.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubScreen(
     title: String,
     onBack: () -> Unit,
-    snackbar: SnackbarHostState,
+    snackbar: SnackbarHostState?,
     tag: String,
     modifier: Modifier = Modifier,
     close: Boolean = false,
@@ -129,7 +129,7 @@ fun SubScreen(
             )
         },
         bottomBar = bottomBar,
-        snackbarHost = { SnackbarHost(snackbar) },
+        snackbarHost = { snackbar?.let { SnackbarHost(it) } },
         floatingActionButton = floatingActionButton,
         contentWindowInsets = WindowInsets.safeDrawing,
         content = content,
