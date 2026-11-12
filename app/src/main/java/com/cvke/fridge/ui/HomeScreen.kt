@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
@@ -34,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -47,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -54,6 +57,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -164,7 +168,7 @@ private fun greeting(): String {
 
 /**
  * The card with the totals: the number of foods, and the numbers of expiring and expired batches. Each of the two
- * numbers of batches is a button when the inventory is loaded.
+ * numbers of batches is a button when the inventory is loaded, and it looks like one (see [Metric]).
  */
 @Composable
 private fun TotalsCard(content: InventoryContent?, onShowFreshness: (Freshness) -> Unit, modifier: Modifier = Modifier) {
@@ -177,8 +181,8 @@ private fun TotalsCard(content: InventoryContent?, onShowFreshness: (Freshness) 
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainer),
     ) {
-        Column(Modifier.padding(24.dp)) {
-            Row(verticalAlignment = Alignment.Top) {
+        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 16.dp)) {
+            Row(Modifier.padding(horizontal = 8.dp), verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f)) {
                     Text(
                         stringResource(R.string.hero_label),
@@ -195,36 +199,57 @@ private fun TotalsCard(content: InventoryContent?, onShowFreshness: (Freshness) 
                 // The icon of the product. It is the one place on Home with the signature gradient.
                 BrandTile()
             }
-            HorizontalDivider(Modifier.padding(vertical = 16.dp), color = scheme.outlineVariant)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Metric(
-                    R.drawable.ic_clock,
-                    content?.let { number(it.expiringCount) } ?: noValue,
-                    stringResource(R.string.metric_expiring),
-                    status.warning,
-                    status.warningContainer,
-                    status.onWarningContainer,
-                    enabled = content != null,
-                    onClick = { onShowFreshness(Freshness.EXPIRING) },
-                    Modifier.weight(1f).testTag("metric_expiring"),
-                )
-                Metric(
-                    R.drawable.ic_alert_outline,
-                    content?.let { number(it.expiredCount) } ?: noValue,
-                    stringResource(R.string.metric_expired),
-                    scheme.error,
-                    scheme.errorContainer,
-                    scheme.onErrorContainer,
-                    enabled = content != null,
-                    onClick = { onShowFreshness(Freshness.EXPIRED) },
-                    Modifier.weight(1f).testTag("metric_expired"),
-                )
+            HorizontalDivider(Modifier.padding(horizontal = 8.dp, vertical = 16.dp), color = scheme.outlineVariant)
+            // The two numbers are side by side. With large text they do not fit, and the second is below the first.
+            BoxWithConstraints {
+                val sideBySide = maxWidth / LocalDensity.current.fontScale >= 264.dp
+                val expiring = @Composable { item: Modifier ->
+                    Metric(
+                        R.drawable.ic_clock,
+                        content?.let { number(it.expiringCount) } ?: noValue,
+                        stringResource(R.string.metric_expiring),
+                        status.warning,
+                        status.warningContainer,
+                        status.onWarningContainer,
+                        enabled = content != null,
+                        onClick = { onShowFreshness(Freshness.EXPIRING) },
+                        item.testTag("metric_expiring"),
+                    )
+                }
+                val expired = @Composable { item: Modifier ->
+                    Metric(
+                        R.drawable.ic_alert_outline,
+                        content?.let { number(it.expiredCount) } ?: noValue,
+                        stringResource(R.string.metric_expired),
+                        scheme.error,
+                        scheme.errorContainer,
+                        scheme.onErrorContainer,
+                        enabled = content != null,
+                        onClick = { onShowFreshness(Freshness.EXPIRED) },
+                        item.testTag("metric_expired"),
+                    )
+                }
+                if (sideBySide) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        expiring(Modifier.weight(1f))
+                        expired(Modifier.weight(1f))
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        expiring(Modifier.fillMaxWidth())
+                        expired(Modifier.fillMaxWidth())
+                    }
+                }
             }
         }
     }
 }
 
-/** One number of the card with its name, as a button. Screen readers hear the two as one item. */
+/**
+ * One number of the card with its name, as a button: a Material surface with its own tone and an arrow at the end, so
+ * that the person can see that a tap opens something. A press shows the Material ripple. Screen readers hear the
+ * number and the name as one button.
+ */
 @Composable
 private fun Metric(
     @DrawableRes icon: Int,
@@ -237,18 +262,29 @@ private fun Metric(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier
-            .clip(MaterialTheme.shapes.medium)
-            .clickable(enabled, onClickLabel = stringResource(R.string.metric_show), role = Role.Button, onClick = onClick)
-            .heightIn(min = 48.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    val scheme = MaterialTheme.colorScheme
+    val action = stringResource(R.string.metric_show)
+    Surface(
+        onClick = onClick,
+        modifier = modifier.semantics { onClick(label = action, action = null) },
+        enabled = enabled,
+        shape = MaterialTheme.shapes.large,
+        color = scheme.surfaceContainerHighest,
     ) {
-        IconTile(icon, container, onContainer)
-        Column {
-            Text(value, color = color, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
-            Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelLarge)
+        Row(
+            Modifier.heightIn(min = 64.dp).padding(start = 8.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconTile(icon, container, onContainer)
+            Column(Modifier.weight(1f)) {
+                Text(value, color = color, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
+                Text(label, color = scheme.onSurfaceVariant, style = MaterialTheme.typography.labelLarge)
+            }
+            // The arrow is there when the number is loaded and the button works.
+            if (enabled) {
+                Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null, Modifier.size(20.dp), tint = scheme.onSurfaceVariant)
+            }
         }
     }
 }

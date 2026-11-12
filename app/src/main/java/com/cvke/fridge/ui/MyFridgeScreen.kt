@@ -300,8 +300,9 @@ private fun FilterRow(view: FilteredFoods, filter: FoodFilter, onFilterChange: (
 
 /**
  * The chip that opens the menu of the categories. It shows "Category", or the selected category in the selected
- * state. The menu has "All categories" and each category with food in the storage area of the tab, each with its
- * number of foods and with a check mark on the selected one.
+ * state. The menu has "All categories" and each category that has food for the tab, the search text, and the
+ * freshness chips, each with its number of foods. The selected category is in the menu also with no food, with a
+ * check mark.
  */
 @Composable
 private fun CategoryChip(view: FilteredFoods, onSelect: (Category?) -> Unit) {

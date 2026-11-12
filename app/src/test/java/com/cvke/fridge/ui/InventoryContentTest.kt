@@ -180,10 +180,13 @@ class InventoryContentTest {
         assertEquals(listOf(Category.DAIRY to 1), categories(freezer))
         assertEquals(0, freezer.expiringCount)
 
-        // A category count is for the selected freshness. A category with no such food stays in the menu.
+        // A category count is for the selected freshness. A category with no such food is not in the menu.
         val expired = sample.filtered(FoodFilter(freshness = setOf(Freshness.EXPIRED)))
         assertEquals(1, expired.allCategoriesCount)
-        assertEquals(listOf(Category.DAIRY to 0, Category.OTHER to 1), categories(expired))
+        assertEquals(listOf(Category.OTHER to 1), categories(expired))
+        // The selected category stays in the menu with a count of 0.
+        val expiredDairy = sample.filtered(FoodFilter(category = Category.DAIRY, freshness = setOf(Freshness.EXPIRED)))
+        assertEquals(listOf(Category.DAIRY to 0, Category.OTHER to 1), categories(expiredDairy))
         // The count of a freshness chip does not change when the chip is on.
         assertEquals(1, expired.expiringCount)
         assertEquals(1, expired.expiredCount)
@@ -198,7 +201,7 @@ class InventoryContentTest {
         val search = sample.filtered(FoodFilter(query = "eggs"))
         assertEquals(7, search.areaFoodCount)
         assertEquals(1, search.allCategoriesCount)
-        assertEquals(listOf(Category.DAIRY to 0, Category.OTHER to 1), categories(search))
+        assertEquals(listOf(Category.OTHER to 1), categories(search))
         assertEquals(0, search.expiringCount)
         assertEquals(1, search.expiredCount)
     }

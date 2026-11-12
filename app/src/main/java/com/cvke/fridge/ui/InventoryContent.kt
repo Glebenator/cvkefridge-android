@@ -77,7 +77,7 @@ data class FoodFilter(
     val query: String = "",
 )
 
-/** A category that has food in the selected storage area, with the number of foods that its menu item shows. */
+/** A category in the menu of the categories, with the number of foods that its menu item shows. */
 data class CategoryCount(val category: Category, val foodCount: Int)
 
 /**
@@ -89,7 +89,8 @@ data class CategoryCount(val category: Category, val foodCount: Int)
  * @property category The category of the filter, or null for all. It is also null when the category of the filter has
  *   no food in the storage area.
  * @property areaFoodCount The number of foods in the storage area, with no other filter.
- * @property categories The categories with food in the storage area, in the order of [Category].
+ * @property categories The categories that the menu shows, in the order of [Category]: each category with a count
+ *   above 0, and the category of the filter.
  * @property allCategoriesCount The count for "All categories".
  * @property expiringCount The count for "Expiring".
  * @property expiredCount The count for "Expired".
@@ -159,8 +160,10 @@ data class InventoryContent(
             areaId = area?.id,
             category = category,
             areaFoodCount = inArea.size,
-            categories = Category.entries.filter { entry -> inArea.any { it.category == entry } }
-                .map { entry -> CategoryCount(entry, withFreshness.count { it.category == entry }) },
+            // A category with a count of 0 gives an empty list, so the menu does not have it. The selected category stays.
+            categories = Category.entries
+                .map { entry -> CategoryCount(entry, withFreshness.count { it.category == entry }) }
+                .filter { it.foodCount > 0 || it.category == category },
             allCategoriesCount = withFreshness.size,
             expiringCount = withCategory.count { Freshness.EXPIRING in it.batchFreshness },
             expiredCount = withCategory.count { Freshness.EXPIRED in it.batchFreshness },
