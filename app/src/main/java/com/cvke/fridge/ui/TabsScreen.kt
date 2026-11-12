@@ -60,6 +60,7 @@ fun TabsScreen(
     snackbar: SnackbarHostState,
     onAddFood: (openAreaId: String?) -> Unit,
     onOpenFood: (productId: String) -> Unit,
+    onManageAreas: () -> Unit,
     onPerform: (InventoryAction) -> Unit,
     onTryAgain: () -> Unit,
 ) {
@@ -120,6 +121,7 @@ fun TabsScreen(
                         onFilterChange = { filter = it },
                         onAddFood = ::addFood,
                         onOpenFood = onOpenFood,
+                        onManageAreas = onManageAreas,
                         onPerform = onPerform,
                         onTryAgain = onTryAgain,
                         insets = insets,

@@ -192,6 +192,30 @@
     <string name="batch_more_actions">More actions for this batch</string>
     <string name="more_actions">More actions</string>
 
+    <!-- The screen of the storage areas. -->
+    <string name="storage_areas">Storage areas</string>
+    <string name="storage_area_add">Add a storage area</string>
+    <string name="storage_area_edit">Edit storage area</string>
+    <string name="action_edit">Edit</string>
+    <!-- On Fridge and Freezer, which the person cannot change or delete. -->
+    <string name="storage_area_fixed">Fixed</string>
+    <string name="storage_areas_none">Fridge and Freezer are always here. Add a storage area for a pantry, or for a second fridge or freezer.</string>
+    <plurals name="item_count">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+    <string name="field_storage_kind">Storage kind</string>
+    <string name="storage_kind_help">The storage kind gives the estimated date of the food in this storage area.</string>
+    <string name="error_area_name_too_long">The name is too long. Use 30 characters or fewer.</string>
+    <string name="error_area_name_in_use">Another storage area has this name.</string>
+    <!-- %1$s is the name of the storage area. -->
+    <string name="storage_area_in_use_title">%1$s has food in it</string>
+    <!-- %1$s is the name of the storage area, %2$d its number of foods. -->
+    <plurals name="storage_area_in_use">
+        <item quantity="one">%1$s has %2$d item. Move it to a different storage area, or record it as used or thrown away. Then delete the storage area.</item>
+        <item quantity="other">%1$s has %2$d items. Move them to a different storage area, or record them as used or thrown away. Then delete the storage area.</item>
+    </plurals>
+
     <!-- The forms that edit a product and a batch. -->
     <string name="edit_food">Edit food</string>
     <string name="edit_batch">Edit batch</string>

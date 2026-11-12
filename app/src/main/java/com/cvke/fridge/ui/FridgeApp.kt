@@ -70,6 +70,7 @@ fun FridgeApp(viewModel: FridgeViewModel) {
                     snackbar = snackbar,
                     onAddFood = { open(Screen.AddFood(openAreaId = it)) },
                     onOpenFood = { open(Screen.Food(it)) },
+                    onManageAreas = { open(Screen.StorageAreas) },
                     onPerform = viewModel::perform,
                     onTryAgain = viewModel::load,
                 )
@@ -82,7 +83,7 @@ fun FridgeApp(viewModel: FridgeViewModel) {
                     snackbar = snackbar,
                     onPerform = viewModel::perform,
                     onFormWriteRead = viewModel::formWriteRead,
-                    onManageAreas = null,
+                    onManageAreas = { open(Screen.StorageAreas) },
                     onTryAgain = viewModel::load,
                     onClose = { close(screen) },
                 )
@@ -120,9 +121,20 @@ fun FridgeApp(viewModel: FridgeViewModel) {
                     snackbar = snackbar,
                     onPerform = viewModel::perform,
                     onFormWriteRead = viewModel::formWriteRead,
-                    onManageAreas = null,
+                    onManageAreas = { open(Screen.StorageAreas) },
                     onTryAgain = viewModel::load,
                     onClose = { close(screen) },
+                )
+            }
+            entry<Screen.StorageAreas> { screen ->
+                StorageAreasScreen(
+                    state = state,
+                    formWrite = formWrite,
+                    snackbar = snackbar,
+                    onPerform = viewModel::perform,
+                    onFormWriteRead = viewModel::formWriteRead,
+                    onTryAgain = viewModel::load,
+                    onBack = { close(screen) },
                 )
             }
         },

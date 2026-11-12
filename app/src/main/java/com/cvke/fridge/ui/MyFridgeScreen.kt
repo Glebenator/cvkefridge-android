@@ -83,7 +83,7 @@ import com.cvke.fridge.ui.theme.Size
  * My Fridge, the screen that lists all food. Its contents start from the My Fridge screen of FridgeFriend
  * (`app/(tabs)/fridge.tsx` in the `basic_ff` repository): a search field, filters for the storage area and the
  * category, a sort control, and one card for each food in each storage area. The storage areas are tabs below the top
- * app bar. The category and the freshness are in one row of chips that does not scroll sideways
+ * app bar, and the menu of the top app bar opens the screen that creates and edits them. The category and the freshness are in one row of chips that does not scroll sideways
  * (`docs/research/competitor-apps.md` in the cvkefridge repository, sections 6 and 6A). The parts are Material 3
  * components. The button that adds food is on the tabs screen, and the empty state has a second one. A card records
  * its food as used or as thrown away (see [FoodCard]).
@@ -98,6 +98,7 @@ fun MyFridgeScreen(
     onFilterChange: (FoodFilter) -> Unit,
     onAddFood: () -> Unit,
     onOpenFood: (productId: String) -> Unit,
+    onManageAreas: () -> Unit,
     onPerform: (InventoryAction) -> Unit,
     onTryAgain: () -> Unit,
     insets: PaddingValues,
@@ -147,6 +148,7 @@ fun MyFridgeScreen(
                     sortKey = key
                     ascending = order
                 }
+                MoreMenu(onManageAreas)
             },
         )
         AreaTabs(
@@ -426,6 +428,27 @@ private fun SortActions(sortKey: SortKey, ascending: Boolean, onChange: (SortKey
             painterResource(if (ascending) R.drawable.ic_arrow_up else R.drawable.ic_arrow_down),
             contentDescription = stringResource(if (ascending) R.string.sort_ascending else R.string.sort_descending),
         )
+    }
+}
+
+/** The menu of the top app bar. It opens the screen of the storage areas. */
+@Composable
+private fun MoreMenu(onManageAreas: () -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }, Modifier.testTag("my_fridge_menu")) {
+            Icon(painterResource(R.drawable.ic_more), contentDescription = stringResource(R.string.more_actions))
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.storage_areas)) },
+                onClick = {
+                    open = false
+                    onManageAreas()
+                },
+                modifier = Modifier.testTag("menu_storage_areas"),
+            )
+        }
     }
 }
 

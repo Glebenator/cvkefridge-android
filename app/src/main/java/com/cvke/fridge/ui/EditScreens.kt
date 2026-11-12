@@ -129,7 +129,7 @@ fun EditBatchScreen(
     snackbar: SnackbarHostState,
     onPerform: (InventoryAction, String) -> Unit,
     onFormWriteRead: (String) -> Unit,
-    onManageAreas: (() -> Unit)?,
+    onManageAreas: () -> Unit,
     onTryAgain: () -> Unit,
     onClose: () -> Unit,
 ) {

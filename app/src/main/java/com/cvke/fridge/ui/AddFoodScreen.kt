@@ -68,7 +68,7 @@ fun AddFoodScreen(
     snackbar: SnackbarHostState,
     onPerform: (InventoryAction, String) -> Unit,
     onFormWriteRead: (String) -> Unit,
-    onManageAreas: (() -> Unit)?,
+    onManageAreas: () -> Unit,
     onTryAgain: () -> Unit,
     onClose: () -> Unit,
 ) {
@@ -221,7 +221,7 @@ fun StorageAreaField(
     areas: List<AreaSummary>,
     selectedId: String,
     onSelect: (String) -> Unit,
-    onManageAreas: (() -> Unit)?,
+    onManageAreas: () -> Unit,
     modifier: Modifier = Modifier,
     error: Boolean = false,
 ) {
@@ -235,7 +235,7 @@ fun StorageAreaField(
         tag = "field_storage_area",
         modifier = modifier,
         error = if (error) stringResource(R.string.error_storage_area) else null,
-        footer = if (onManageAreas == null) null else { close ->
+        footer = { close ->
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.storage_areas_manage)) },
                 onClick = {
