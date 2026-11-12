@@ -12,6 +12,7 @@ import com.cvke.fridge.core.Product
 import com.cvke.fridge.core.RejectionReason
 import com.cvke.fridge.core.StorageKind
 import com.cvke.fridge.core.UseFirst
+import com.cvke.fridge.lookup.Barcodes
 
 /** One thing that the person does to the inventory. [InventoryActions.plan] makes its changes. */
 sealed interface InventoryAction {
@@ -19,6 +20,7 @@ sealed interface InventoryAction {
      * Adds a batch. With no [productId], it also adds the product.
      *
      * @property quantity In thousandths.
+     * @property barcode The barcode of a scan, or null. See [InventoryActions.plan] for the product that gets it.
      */
     data class AddFood(
         val productId: String?,
@@ -29,6 +31,7 @@ sealed interface InventoryAction {
         val quantity: Long,
         val storageAreaId: String,
         val expiry: ExpiryDate?,
+        val barcode: String? = null,
     ) : InventoryAction
 
     /** Replaces the values of a product. */
@@ -111,19 +114,7 @@ object InventoryActions {
      * @param newId Makes a random identifier.
      */
     fun plan(action: InventoryAction, inventory: Inventory, today: CalendarDate, newId: () -> String): Planned = when (action) {
-        is InventoryAction.AddFood -> {
-            val productId = action.productId ?: newId()
-            val batch = Batch(newId(), productId, action.quantity, action.storageAreaId, today, action.expiry)
-            val product = Product(productId, action.name, action.category, action.unit, barcode = null, foodId = action.foodId)
-            Planned.Changes(
-                bodies = listOfNotNull(
-                    ChangeBody.ProductSaved(product).takeIf { action.productId == null },
-                    ChangeBody.BatchAdded(batch),
-                ),
-                message = NoticeMessage.Added(action.name),
-                undoable = true,
-            )
-        }
+        is InventoryAction.AddFood -> addFood(action, inventory, today, newId)
         is InventoryAction.SaveProduct -> Planned.Changes(listOf(ChangeBody.ProductSaved(action.product)))
         is InventoryAction.EditBatch -> Planned.Changes(
             listOf(ChangeBody.BatchEdited(action.batchId, action.quantity, action.storageAreaId, action.dateAdded, action.expiry)),
@@ -150,6 +141,30 @@ object InventoryActions {
             } else {
                 Planned.Changes(action.changeIds.map(ChangeBody::ChangeUndone))
             }
+    }
+
+    /**
+     * A barcode belongs to one product. A new product gets the barcode of the action. A product in the inventory with
+     * no barcode gets it also, so that the next scan finds it. The barcode is not saved when another product has it:
+     * the scan of that barcode then finds the other product, as before.
+     */
+    private fun addFood(action: InventoryAction.AddFood, inventory: Inventory, today: CalendarDate, newId: () -> String): Planned {
+        val productId = action.productId ?: newId()
+        val barcode = action.barcode?.takeIf { code ->
+            inventory.products.none { it.id != productId && it.barcode?.let(Barcodes::normalize) == code }
+        }
+        val existing = action.productId?.let { id -> inventory.products.firstOrNull { it.id == id } }
+        val saved = when {
+            action.productId == null -> Product(productId, action.name, action.category, action.unit, barcode, action.foodId)
+            existing != null && existing.barcode == null && barcode != null -> existing.copy(barcode = barcode)
+            else -> null
+        }
+        val batch = Batch(newId(), productId, action.quantity, action.storageAreaId, today, action.expiry)
+        return Planned.Changes(
+            bodies = listOfNotNull(saved?.let(ChangeBody::ProductSaved), ChangeBody.BatchAdded(batch)),
+            message = NoticeMessage.Added(action.name),
+            undoable = true,
+        )
     }
 
     private fun take(action: InventoryAction.Take, inventory: Inventory, today: CalendarDate): Planned {

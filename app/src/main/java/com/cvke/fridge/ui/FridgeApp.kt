@@ -36,6 +36,9 @@ import com.cvke.fridge.ui.theme.Motion
  * tabs. The other screens open above the tabs, with no navigation bar, and the system back gesture closes them with
  * the preview of the screen below. The back stack stays when Android stops the app in the background.
  *
+ * The scanner opens the add form above itself. "Save and scan next" closes the form and shows the scanner again.
+ * "Save" closes the form and the scanner. "Add by hand" on the scanner opens a form with no scan above the scanner.
+ *
  * The screens get the state of the view model and call it for each action. No screen keeps a copy of the inventory.
  */
 @Composable
@@ -43,6 +46,7 @@ fun FridgeApp(viewModel: FridgeViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val formWrite by viewModel.formWrite.collectAsStateWithLifecycle()
     val notice by viewModel.notice.collectAsStateWithLifecycle()
+    val lookup by viewModel.lookup.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     NoticeSnackbar(notice, snackbar, onAction = viewModel::perform, onShown = viewModel::noticeShown)
 
@@ -54,6 +58,10 @@ fun FridgeApp(viewModel: FridgeViewModel) {
     fun close(screen: Screen) {
         backStack.remove(screen)
     }
+    // A lookup stops when the scanner leaves the back stack, by its close button or by the back gesture. It does not
+    // stop when the screen turns.
+    val scanning = backStack.any { it is Screen.Scan }
+    LaunchedEffect(scanning) { if (!scanning) viewModel.cancelLookup() }
     val forward = screenChange(towardsEnd = true)
     val back = screenChange(towardsEnd = false)
     NavDisplay(
@@ -84,7 +92,29 @@ fun FridgeApp(viewModel: FridgeViewModel) {
                     onPerform = viewModel::perform,
                     onFormWriteRead = viewModel::formWriteRead,
                     onManageAreas = { open(Screen.StorageAreas) },
+                    onScan = {
+                        // The scanner takes the place of the empty form.
+                        close(screen)
+                        open(Screen.Scan(screen.openAreaId))
+                    },
                     onTryAgain = viewModel::load,
+                    onClose = { close(screen) },
+                    onSaved = { scanNext ->
+                        close(screen)
+                        // "Save" also closes the scanner below the form. "Save and scan next" shows it again.
+                        if (!scanNext && backStack.lastOrNull() is Screen.Scan) backStack.removeAt(backStack.lastIndex)
+                    },
+                )
+            }
+            entry<Screen.Scan> { screen ->
+                ScanScreen(
+                    lookup = lookup,
+                    snackbar = snackbar,
+                    onLookUp = viewModel::lookUp,
+                    onCancelLookup = viewModel::cancelLookup,
+                    onLookupShown = viewModel::lookupShown,
+                    onOpenForm = { scanned, productId -> open(Screen.AddFood(productId, screen.openAreaId, scanned)) },
+                    onAddByHand = { open(Screen.AddFood(openAreaId = screen.openAreaId)) },
                     onClose = { close(screen) },
                 )
             }

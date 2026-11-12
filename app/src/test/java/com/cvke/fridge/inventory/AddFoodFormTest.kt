@@ -10,6 +10,8 @@ import com.cvke.fridge.core.MeasureUnit
 import com.cvke.fridge.core.Product
 import com.cvke.fridge.core.StorageArea
 import com.cvke.fridge.core.StorageKind
+import com.cvke.fridge.lookup.ScanSource
+import com.cvke.fridge.lookup.Scanned
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -130,6 +132,43 @@ class AddFoodFormTest {
         assertEquals("freezer", AddFoodForm.startArea(null, "freezer", areas))
         assertEquals("freezer", AddFoodForm.startArea("deleted", "freezer", areas))
         assertEquals("fridge", AddFoodForm.startArea(null, null, areas))
+    }
+
+    @Test
+    fun aScanFillsInTheFormAndTheBarcodeGoesIntoTheAction() {
+        val scan = Scanned("3017620422003", ScanSource.FOUND, "Nutella", "condiment", null, 400_000, "g")
+        val form = AddFoodForm.scanned(scan, "pantry-1", ',')
+        assertEquals(
+            AddFoodForm(
+                name = "Nutella",
+                category = Category.CONDIMENT,
+                quantity = "400",
+                unit = MeasureUnit.G,
+                storageAreaId = "pantry-1",
+                barcode = "3017620422003",
+            ),
+            form,
+        )
+        assertEquals("3017620422003", form.action(products, areas, foods, today)?.barcode)
+        // The quantity has the decimal sign of the locale.
+        assertEquals("1,5", AddFoodForm.scanned(scan.copy(quantity = 1_500, unit = "l"), "fridge", ',').quantity)
+        // The next form has no barcode.
+        assertNull(form.next().barcode)
+    }
+
+    @Test
+    fun aScanWithNoValuesKeepsTheStartValuesAndTheBarcode() {
+        val notFound = AddFoodForm.scanned(Scanned("5449000000996", ScanSource.NOT_FOUND), "fridge", '.')
+        assertEquals(AddFoodForm(storageAreaId = "fridge", barcode = "5449000000996"), notFound)
+        // A quantity with no unit is not reliable.
+        assertEquals("1", AddFoodForm.scanned(Scanned("1", ScanSource.FOUND, "Rice", quantity = 500_000), "fridge", '.').quantity)
+    }
+
+    @Test
+    fun theFoodOfAScanGivesTheEstimatedDate() {
+        val scanned = AddFoodForm.scanned(Scanned("1", ScanSource.FOUND, "Président Butter", "dairy", "f-butter"), "fridge", '.')
+        assertEquals(estimated("2026-12-12"), scanned.estimate(products, areas, foods, today))
+        assertEquals(estimated("2026-12-12"), scanned.action(products, areas, foods, today)?.expiry)
     }
 
     @Test

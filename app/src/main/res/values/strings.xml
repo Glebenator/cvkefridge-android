@@ -295,4 +295,62 @@
 
     <!-- The sample of the debug build. -->
     <string name="sample_note">Sample data</string>
+
+    <!-- The two ways to add food: the floating buttons, the empty states, and the scanner. -->
+    <string name="action_scan_barcode">Scan a barcode</string>
+    <string name="action_add_by_hand">Add by hand</string>
+
+    <!-- The scanner. -->
+    <string name="scan_title">Scan a barcode</string>
+    <string name="scan_hint">Point the camera at the barcode.</string>
+    <!-- After some seconds with no barcode. -->
+    <string name="scan_hint_slow">Can\'t read the barcode? Hold it flat and still, 10 to 20 cm from the camera. Turn on the light, or type the barcode.</string>
+    <!-- What leaves the phone. Below the camera, and on the explanation of the camera permission. -->
+    <string name="scan_privacy">Only the barcode number goes to Open Food Facts, to find the product name. Nothing else leaves your phone.</string>
+    <!-- For screen readers: the camera picture. A tap on it focuses the camera. -->
+    <string name="scan_camera_description">Camera picture. Point the camera at a barcode.</string>
+    <string name="torch_on">Turn on the light</string>
+    <string name="torch_off">Turn off the light</string>
+    <string name="action_type_barcode">Type the barcode</string>
+
+    <!-- The camera permission. The explanation comes before Android asks. -->
+    <string name="camera_ask_title">Scan barcodes with the camera</string>
+    <string name="camera_ask_body">CVKE Fridge uses the camera only to read barcodes. The camera picture stays on your phone. The app does not keep it or send it.</string>
+    <string name="camera_allow">Allow the camera</string>
+    <string name="camera_denied_title">Camera access is off</string>
+    <string name="camera_denied_body">To scan a barcode, allow the camera. You can also type the barcode, or add the food by hand.</string>
+    <!-- The person selected "Don't allow" two times, or "Don't ask again". Android does not show its question again. -->
+    <string name="camera_blocked_body">Android does not ask again. To scan, open the settings of the app, select Permissions, and allow the camera.</string>
+    <string name="camera_open_settings">Open settings</string>
+    <string name="camera_none_title">No camera on this device</string>
+    <string name="camera_none_body">Type the barcode, or add the food by hand.</string>
+    <string name="camera_failed_title">The camera can\'t start</string>
+    <string name="camera_failed_body">Another app can use the camera now. Close that app, or type the barcode.</string>
+
+    <!-- The product lookup. %1$s is a barcode. -->
+    <string name="lookup_looking">Looking up barcode %1$s…</string>
+    <string name="action_scan_again">Scan again</string>
+    <string name="action_enter_by_hand">Enter by hand</string>
+    <string name="lookup_no_connection_title">No connection</string>
+    <string name="lookup_no_connection_body">The product lookup needs the internet. Try again, or enter the food by hand. The app keeps barcode %1$s with the food.</string>
+    <string name="lookup_timeout_title">Open Food Facts did not answer</string>
+    <string name="lookup_timeout_body">The answer took too long. Try again, or enter the food by hand. The app keeps barcode %1$s with the food.</string>
+    <string name="lookup_busy_title">Too many lookups</string>
+    <string name="lookup_busy_body">Wait one minute and try again, or enter the food by hand. The app keeps barcode %1$s with the food.</string>
+    <string name="lookup_server_title">Open Food Facts has a problem</string>
+    <string name="lookup_server_body">Try again later, or enter the food by hand. The app keeps barcode %1$s with the food.</string>
+
+    <!-- The dialog for a typed barcode. -->
+    <string name="field_barcode">Barcode</string>
+    <string name="barcode_help">The 8, 12, 13, or 14 digits below the lines of the barcode.</string>
+    <string name="error_barcode_not_a_barcode">Enter the 8, 12, 13, or 14 digits below the lines of the barcode.</string>
+    <string name="error_barcode_check_digit">A digit is not correct. Check the digits.</string>
+    <string name="action_look_up">Look up</string>
+
+    <!-- The add form after a scan. %1$s is a barcode. -->
+    <string name="action_save_and_scan_next">Save and scan next</string>
+    <string name="scan_from_open_food_facts">From Open Food Facts. Check the values before you save.</string>
+    <string name="scan_not_found">Open Food Facts has no product with this barcode. Type the name.</string>
+    <string name="scan_not_looked_up">The app could not look up this barcode. Type the name.</string>
+    <string name="scan_barcode">Barcode %1$s. The app keeps it with the food, so the next scan finds it.</string>
 </resources>

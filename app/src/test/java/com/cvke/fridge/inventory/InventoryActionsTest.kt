@@ -68,6 +68,33 @@ class InventoryActionsTest {
     }
 
     @Test
+    fun aScannedBarcodeGoesOnTheProductWhenNoOtherProductHasIt() {
+        val scanned = InventoryAction.AddFood(null, "Nutella", Category.CONDIMENT, MeasureUnit.G, null, 400_000, "pantry", null, "3017620422003")
+        val (_, changes) = apply(scanned)
+        assertEquals("3017620422003", Inventory.replay(changes).products.single { it.name == "Nutella" }.barcode)
+
+        // Another product has the barcode. The new product does not get it, so a scan still finds the first product.
+        val (_, twice) = apply(scanned.copy(name = "Hazelnut spread"), changes)
+        assertNull(Inventory.replay(twice).products.single { it.name == "Hazelnut spread" }.barcode)
+    }
+
+    @Test
+    fun aProductInTheInventoryWithNoBarcodeGetsTheScannedBarcode() {
+        val batch = InventoryAction.AddFood("milk", "Milk", Category.DAIRY, MeasureUnit.L, null, 1_000, "fridge", null, "5449000000996")
+        val (planned, changes) = apply(batch)
+        assertEquals(2, planned.bodies.size)
+        assertEquals("5449000000996", Inventory.replay(changes).products.single { it.id == "milk" }.barcode)
+
+        // A product keeps the barcode that it has.
+        val (other, _) = apply(batch.copy(barcode = "3017620422003"), changes)
+        assertEquals(1, other.bodies.size)
+
+        // The undo of the add also removes the barcode.
+        val (_, undone) = apply(InventoryAction.Undo(changes.drop(log.size).map { it.id }), changes)
+        assertNull(Inventory.replay(undone).products.single { it.id == "milk" }.barcode)
+    }
+
+    @Test
     fun aUseTakesFromTheOldestBatchFirst() {
         val fridge = listOf("m-new", "m-old")
         val (planned, changes) = apply(InventoryAction.Take("milk", fridge, 1_500, Outcome.USED))

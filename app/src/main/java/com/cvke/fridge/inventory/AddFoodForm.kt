@@ -8,6 +8,7 @@ import com.cvke.fridge.core.FoodTable
 import com.cvke.fridge.core.MeasureUnit
 import com.cvke.fridge.core.Product
 import com.cvke.fridge.core.StorageArea
+import com.cvke.fridge.lookup.Scanned
 
 /** Why a name in a form is not good. */
 enum class NameError { EMPTY, TOO_LONG, IN_USE }
@@ -20,6 +21,7 @@ enum class NameError { EMPTY, TOO_LONG, IN_USE }
  * @property categoryChosen True after the person selected the category. A food then does not change it.
  * @property quantity The text of the quantity field.
  * @property checked True after the person selected "Save" one time. The form then shows the problem of each field.
+ * @property barcode The barcode of a scan, or null. The form shows it but does not let the person change it.
  */
 data class AddFoodForm(
     val name: String = "",
@@ -31,6 +33,7 @@ data class AddFoodForm(
     val storageAreaId: String = StorageArea.fridge.id,
     val expiry: ExpiryInput = ExpiryInput.Suggested,
     val checked: Boolean = false,
+    val barcode: String? = null,
 ) {
     /** The product in the inventory with this name. The form then adds a batch to it, and makes no second product. */
     fun product(products: List<Product>): Product? {
@@ -97,6 +100,7 @@ data class AddFoodForm(
             quantity = typed.thousandths,
             storageAreaId = storageAreaId,
             expiry = ExpiryChoice.expiry(expiry, estimate(products, areas, foods, today)),
+            barcode = barcode,
         )
     }
 
@@ -105,6 +109,27 @@ data class AddFoodForm(
 
     companion object {
         const val DEFAULT_QUANTITY = "1"
+
+        /**
+         * The form after a scan, with the values of the scan. A value that the scan does not have keeps the start
+         * value of the form. The quantity of a package needs its unit. Everything stays editable, and the expiry date
+         * starts as the estimated date.
+         *
+         * @param decimalSeparator The decimal sign of the locale, for the quantity text.
+         */
+        fun scanned(scan: Scanned, storageAreaId: String, decimalSeparator: Char): AddFoodForm {
+            val unit = scan.unit?.let(MeasureUnit::fromKey)
+            val pack = scan.quantity?.takeIf { unit != null }
+            return AddFoodForm(
+                name = scan.name,
+                foodId = scan.foodId,
+                category = scan.category?.let(Category::fromKey) ?: Category.OTHER,
+                quantity = pack?.let { QuantityText.format(it, decimalSeparator) } ?: DEFAULT_QUANTITY,
+                unit = if (pack != null) unit else MeasureUnit.PCS,
+                storageAreaId = storageAreaId,
+                barcode = scan.barcode,
+            )
+        }
 
         /**
          * The storage area of a new form: the storage area of the last batch that the person added, then the storage

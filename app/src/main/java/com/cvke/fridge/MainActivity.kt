@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
     private val changeLog get() = app.changeLog
 
     private val viewModel: FridgeViewModel by viewModels {
-        viewModelFactory { initializer { FridgeViewModel(changeLog, app.phoneId, app::readFoodTable, ::today) } }
+        viewModelFactory { initializer { FridgeViewModel(changeLog, app.phoneId, app::readFoodTable, ::today, app.productLookup) } }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

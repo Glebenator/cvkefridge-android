@@ -5,10 +5,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -31,7 +34,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
@@ -48,6 +53,9 @@ import com.cvke.fridge.inventory.ExpiryChoice
 import com.cvke.fridge.inventory.ExpiryInput
 import com.cvke.fridge.inventory.InventoryAction
 import com.cvke.fridge.inventory.Suggestion
+import com.cvke.fridge.lookup.ScanSource
+import com.cvke.fridge.lookup.Scanned
+import java.text.DecimalFormatSymbols
 import java.util.UUID
 
 /**
@@ -58,7 +66,15 @@ import java.util.UUID
  * and the storage area, and it is never today by default. "Save and add another" keeps the form open, with the
  * storage area.
  *
+ * After a scan ([Screen.AddFood.scan]), the form opens with the values of the product lookup: the name, the category,
+ * the food of the table of foods, and the quantity of the package. The form says where the values come from, and the
+ * expiry date shows that it is an estimate. Everything stays editable. When Open Food Facts does not have the
+ * barcode, the name is empty and has the focus, and the barcode stays. "Save and scan next" saves and shows the
+ * scanner again. The name field of an empty form has a button that opens the scanner.
+ *
  * A write that fails leaves the form as it is, with a message above the buttons.
+ *
+ * @param onSaved The changes are in the change log. It gets true for "Save and scan next".
  */
 @Composable
 fun AddFoodScreen(
@@ -69,8 +85,10 @@ fun AddFoodScreen(
     onPerform: (InventoryAction, String) -> Unit,
     onFormWriteRead: (String) -> Unit,
     onManageAreas: () -> Unit,
+    onScan: () -> Unit,
     onTryAgain: () -> Unit,
     onClose: () -> Unit,
+    onSaved: (scanNext: Boolean) -> Unit,
 ) {
     val ready = state as? FridgeUiState.Ready
     if (ready == null) {
@@ -79,29 +97,42 @@ fun AddFoodScreen(
     }
     val products = ready.inventory.products
     val areas = ready.inventory.storageAreas
+    val scan = screen.scan
+    val locale = LocalConfiguration.current.locales[0]
     val token = rememberSaveable { UUID.randomUUID().toString() }
     var form by rememberSaveable(stateSaver = AddFoodFormSaver) {
+        val area = AddFoodForm.startArea(ready.lastAreaId, screen.openAreaId, areas)
+        val existing = products.firstOrNull { it.id == screen.productId }
         mutableStateOf(
-            AddFoodForm(
-                name = products.firstOrNull { it.id == screen.productId }?.name.orEmpty(),
-                storageAreaId = AddFoodForm.startArea(ready.lastAreaId, screen.openAreaId, areas),
-            ),
+            when {
+                existing != null -> AddFoodForm(name = existing.name, storageAreaId = area, barcode = scan?.barcode)
+                scan != null -> AddFoodForm.scanned(scan, area, DecimalFormatSymbols.getInstance(locale).decimalSeparator)
+                else -> AddFoodForm(storageAreaId = area)
+            },
         )
     }
     var another by rememberSaveable { mutableStateOf(false) }
     val nameFocus = remember { FocusRequester() }
     var nameFocused by remember { mutableStateOf(false) }
+    // With no name from the lookup, the person types the name first.
+    var focusAsked by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!focusAsked && scan != null && form.name.isEmpty()) nameFocus.requestFocus()
+        focusAsked = true
+    }
 
     val saving = formWrite == FormWrite.Saving(token)
     val failed = (formWrite as? FormWrite.Failed)?.takeIf { it.token == token }
     LaunchedEffect(formWrite) {
         if (formWrite == FormWrite.Saved(token)) {
             onFormWriteRead(token)
-            if (another) {
-                form = form.next()
-                nameFocus.requestFocus()
-            } else {
-                onClose()
+            when {
+                scan != null -> onSaved(another)
+                another -> {
+                    form = form.next()
+                    nameFocus.requestFocus()
+                }
+                else -> onSaved(false)
             }
         }
     }
@@ -129,8 +160,14 @@ fun AddFoodScreen(
         close = true,
         bottomBar = {
             FormButtons {
-                OutlinedButton(onClick = { save(addAnother = true) }, Modifier.testTag("save_another"), enabled = !saving) {
-                    Text(stringResource(R.string.action_save_and_add_another))
+                if (scan != null) {
+                    OutlinedButton(onClick = { save(addAnother = true) }, Modifier.testTag("save_scan_next"), enabled = !saving) {
+                        Text(stringResource(R.string.action_save_and_scan_next))
+                    }
+                } else {
+                    OutlinedButton(onClick = { save(addAnother = true) }, Modifier.testTag("save_another"), enabled = !saving) {
+                        Text(stringResource(R.string.action_save_and_add_another))
+                    }
                 }
                 Button(onClick = { save(addAnother = false) }, Modifier.testTag("save"), enabled = !saving) {
                     Text(stringResource(R.string.action_save))
@@ -139,6 +176,7 @@ fun AddFoodScreen(
         },
     ) { padding ->
         FormColumn(padding) {
+            if (scan != null) ScanNote(scan)
             OutlinedTextField(
                 value = form.name,
                 onValueChange = { form = form.withName(it, ready.foods) },
@@ -149,6 +187,13 @@ fun AddFoodScreen(
                     .semantics { if (nameError != null) error(nameError) }
                     .testTag("field_name"),
                 label = { Text(stringResource(R.string.field_name)) },
+                trailingIcon = if (scan != null || form.name.isNotEmpty()) null else {
+                    {
+                        IconButton(onScan, Modifier.testTag("name_scan")) {
+                            Icon(painterResource(R.drawable.ic_barcode_scan), contentDescription = stringResource(R.string.action_scan_barcode))
+                        }
+                    }
+                },
                 supportingText = when {
                     nameError != null -> ({ Text(nameError, Modifier.testTag("error_name")) })
                     existing != null -> ({ Text(stringResource(R.string.add_food_existing), Modifier.testTag("name_existing")) })
@@ -274,6 +319,35 @@ private fun Suggestions(suggestions: List<Suggestion>, onSelect: (Suggestion) ->
     }
 }
 
+/**
+ * Where the values of a scan come from, above the fields: "From Open Food Facts", or that the person must type the
+ * name. It also shows the barcode that the food keeps. A product in the inventory needs no note: the name field says
+ * that the form adds a batch to it.
+ */
+@Composable
+private fun ScanNote(scan: Scanned, modifier: Modifier = Modifier) {
+    val scheme = MaterialTheme.colorScheme
+    val text = when (scan.source) {
+        ScanSource.FOUND -> R.string.scan_from_open_food_facts
+        ScanSource.NOT_FOUND -> R.string.scan_not_found
+        ScanSource.NOT_LOOKED_UP -> R.string.scan_not_looked_up
+        ScanSource.IN_INVENTORY -> return
+    }
+    OutlinedCard(modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.testTag("scan_note")) {
+        Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Icon(painterResource(R.drawable.ic_barcode_scan), contentDescription = null, tint = scheme.primary)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(stringResource(text), color = scheme.onSurface, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    stringResource(R.string.scan_barcode, scan.barcode),
+                    color = scheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
+    }
+}
+
 /** Keeps the form when Android stops the app in the background, and while another screen is above the form. */
 private val AddFoodFormSaver: Saver<AddFoodForm, Any> = listSaver(
     save = { form ->
@@ -287,6 +361,7 @@ private val AddFoodFormSaver: Saver<AddFoodForm, Any> = listSaver(
             form.storageAreaId,
             expiryInputText(form.expiry),
             form.checked,
+            form.barcode,
         )
     },
     restore = { saved ->
@@ -300,6 +375,7 @@ private val AddFoodFormSaver: Saver<AddFoodForm, Any> = listSaver(
             storageAreaId = saved[6] as String,
             expiry = expiryInputOf(saved[7] as String),
             checked = saved[8] as Boolean,
+            barcode = saved[9] as String?,
         )
     },
 )

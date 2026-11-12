@@ -15,10 +15,17 @@ import com.cvke.fridge.inventory.InventoryActions
 import com.cvke.fridge.inventory.NewChanges
 import com.cvke.fridge.inventory.NoticeMessage
 import com.cvke.fridge.inventory.Planned
+import com.cvke.fridge.lookup.LookupFailure
+import com.cvke.fridge.lookup.LookupResult
+import com.cvke.fridge.lookup.ProductLookup
+import com.cvke.fridge.lookup.ScanSource
+import com.cvke.fridge.lookup.Scanned
+import com.cvke.fridge.lookup.ScannedFoods
 import java.io.IOException
 import java.util.UUID
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -62,6 +69,24 @@ sealed interface FridgeUiState {
  */
 data class Notice(val id: Long, val message: NoticeMessage, val undo: InventoryAction.Undo? = null, val retry: InventoryAction? = null)
 
+/** The state of the product lookup of the scanner. */
+sealed interface LookupState {
+    data object Idle : LookupState
+
+    data class Looking(val barcode: String) : LookupState
+
+    /**
+     * The add form can open with the values of the scan. The scanner opens it and then calls
+     * [FridgeViewModel.lookupShown] with the [id].
+     *
+     * @property productId The product in the inventory with the barcode, or null.
+     */
+    data class Done(val id: Long, val scanned: Scanned, val productId: String?) : LookupState
+
+    /** The lookup failed. The scanner keeps the [barcode] for "Try again" and "Enter by hand". */
+    data class Failed(val barcode: String, val failure: LookupFailure) : LookupState
+}
+
 /** The state of the write of a form. The [token] names the form, so that a form does not read the result of another form. */
 sealed interface FormWrite {
     data object Idle : FormWrite
@@ -81,8 +106,12 @@ sealed interface FormWrite {
  * A write adds changes to the change log, and then the screens get the replay of the new log. The screens never show
  * a result that is not in the log.
  *
+ * The view model also does the product lookup of the scanner. It runs in the scope of the view model, so it continues
+ * when the screen turns, and [cancelLookup] stops it when the scanner closes.
+ *
  * @param readFoods Reads the table of foods.
  * @param today The date in the time zone of the device.
+ * @param productLookup The product lookup with its cache on the phone.
  * @param now The instant of now, in milliseconds from 1970-01-01T00:00:00Z.
  * @param newId Makes a random identifier for a product, a batch, a storage area, or a change.
  */
@@ -91,6 +120,7 @@ class FridgeViewModel(
     private val phoneId: PhoneId,
     private val readFoods: suspend () -> FoodTable,
     private val today: () -> CalendarDate,
+    private val productLookup: ProductLookup,
     private val now: () -> Long = System::currentTimeMillis,
     private val newId: () -> String = { UUID.randomUUID().toString() },
     private val work: CoroutineDispatcher = Dispatchers.Default,
@@ -105,6 +135,11 @@ class FridgeViewModel(
 
     private val _formWrite = MutableStateFlow<FormWrite>(FormWrite.Idle)
     val formWrite: StateFlow<FormWrite> = _formWrite.asStateFlow()
+
+    private val _lookup = MutableStateFlow<LookupState>(LookupState.Idle)
+    val lookup: StateFlow<LookupState> = _lookup.asStateFlow()
+    private var lookupJob: Job? = null
+    private var lookupCount = 0L
 
     /** What the last read or write gave. One read or write runs at a time. */
     private class Loaded(val changes: List<Change>, val inventory: Inventory, val foods: FoodTable, val origin: String)
@@ -183,6 +218,44 @@ class FridgeViewModel(
 
     /** The snackbar closed the message. */
     fun noticeShown(id: Long) = _notice.update { if (it?.id == id) null else it }
+
+    /**
+     * Finds the product of a scanned or typed [barcode], in the form of [com.cvke.fridge.lookup.Barcodes]. A product
+     * in the inventory with the barcode comes first, with no network. Then the product lookup: the cache on the
+     * phone, and then Open Food Facts. A new lookup replaces a lookup that runs.
+     */
+    fun lookUp(barcode: String) {
+        lookupJob?.cancel()
+        _lookup.value = LookupState.Looking(barcode)
+        lookupJob = viewModelScope.launch {
+            val ready = _state.value as? FridgeUiState.Ready
+            val known = ready?.let { ScannedFoods.productWithBarcode(it.inventory.products, barcode) }
+            _lookup.value = if (known != null) {
+                LookupState.Done(++lookupCount, Scanned(barcode, ScanSource.IN_INVENTORY), known.id)
+            } else {
+                when (val result = productLookup.find(barcode)) {
+                    is LookupResult.Found -> {
+                        // The table of foods of the newest state, for the expiry estimate.
+                        val foods = (_state.value as? FridgeUiState.Ready)?.foods ?: FoodTable(emptyList())
+                        val scanned = withContext(work) { ScannedFoods.found(barcode, result.product, foods) }
+                        LookupState.Done(++lookupCount, scanned, null)
+                    }
+                    LookupResult.NotFound -> LookupState.Done(++lookupCount, Scanned(barcode, ScanSource.NOT_FOUND), null)
+                    is LookupResult.Failed -> LookupState.Failed(barcode, result.failure)
+                }
+            }
+        }
+    }
+
+    /** Stops the lookup that runs, and forgets its result. */
+    fun cancelLookup() {
+        lookupJob?.cancel()
+        lookupJob = null
+        _lookup.value = LookupState.Idle
+    }
+
+    /** The scanner opened the add form for the result [id]. */
+    fun lookupShown(id: Long) = _lookup.update { if (it is LookupState.Done && it.id == id) LookupState.Idle else it }
 
     /** The form read the result of its write. */
     fun formWriteRead(token: String) = _formWrite.update { current ->

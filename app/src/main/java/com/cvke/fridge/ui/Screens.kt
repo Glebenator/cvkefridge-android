@@ -1,6 +1,7 @@
 package com.cvke.fridge.ui
 
 import androidx.navigation3.runtime.NavKey
+import com.cvke.fridge.lookup.Scanned
 import kotlinx.serialization.Serializable
 
 /**
@@ -17,9 +18,19 @@ sealed interface Screen : NavKey {
      *
      * @property productId The product that gets a batch, or null for a form with no name.
      * @property openAreaId The storage area of the tab of My Fridge that was open, or null.
+     * @property scan The values of a scan, or null for a form that the person fills in by hand. A form with a scan
+     *   has the button "Save and scan next".
      */
     @Serializable
-    data class AddFood(val productId: String? = null, val openAreaId: String? = null) : Screen
+    data class AddFood(val productId: String? = null, val openAreaId: String? = null, val scan: Scanned? = null) : Screen
+
+    /**
+     * The barcode scanner, with the explanation of the camera permission and the product lookup.
+     *
+     * @property openAreaId The storage area of the tab of My Fridge that was open, or null. The add form gets it.
+     */
+    @Serializable
+    data class Scan(val openAreaId: String? = null) : Screen
 
     /** One product with its batches. */
     @Serializable
