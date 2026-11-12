@@ -2,8 +2,8 @@
 
 [![Android CI](https://github.com/Glebenator/cvkefridge-android/actions/workflows/android.yml/badge.svg?branch=main)](https://github.com/Glebenator/cvkefridge-android/actions/workflows/android.yml?query=branch%3Amain)
 
-A native Android app for food inventory in the fridge. It has the change log on the phone and its first two screens,
-Home and My Fridge. No screen adds or changes food yet. It uses Kotlin, Jetpack Compose, and Material 3.
+A native Android app for food inventory in the fridge. It keeps the inventory on one phone: a person adds food by
+hand, edits it, and records it as used or as thrown away. It uses Kotlin, Jetpack Compose, and Material 3.
 
 CVKE Fridge has three repositories:
 
@@ -15,16 +15,34 @@ CVKE Fridge has three repositories:
 
 ## Status
 
-- **Two screens that read the inventory.** Home shows the totals and the first expired and expiring batches. My
-  Fridge shows one card for each food in each storage area, with tabs for the storage areas, a search field, one row
-  of chips for the category and the freshness, and a sort control. A tap on the number of expiring or expired batches
-  on Home opens My Fridge with that freshness. The two screens have the contents of FridgeFriend (the `basic_ff` repository), with
-  Material 3 components. The colours are a Material 3 colour scheme from its green, and the text starts from its
-  text. The app does not use the wallpaper colours. The brand parts come from the design system of the owner: the
-  signature gradient on the app icon and on the icon of the product, About with the cvke letters, the slice in an
-  empty state, and the motion values. The inventory is the
-  replay of a change log in the private files of the app. No screen writes to it yet, so the release build shows no
-  food. The decision record is ADR 0006 in the cvkefridge repository.
+- **Home and My Fridge.** Home shows the totals and the first expired and expiring batches. My Fridge shows one card
+  for each food in each storage area, with tabs for the storage areas, a search field, one row of chips for the
+  category and the freshness, and a sort control. A tap on the number of expiring or expired batches on Home opens My
+  Fridge with that freshness. The two screens have the contents of FridgeFriend (the `basic_ff` repository), with
+  Material 3 components. The colours are a Material 3 colour scheme from its green. The app does not use the
+  wallpaper colours. The brand parts come from the design system of the owner. The decision record is ADR 0006 in the
+  cvkefridge repository.
+- **Add food by hand.** The add button on the two tabs opens one short form: the name, the category, the quantity and
+  the unit, the storage area, and the expiry date. The name field suggests the foods of the table of foods and the
+  products in the inventory. A name of a product in the inventory adds a batch to it. The expiry date starts as the
+  estimated date for the food and the storage kind, and the form shows it as an estimate. The person can enter the
+  printed date with the Material date picker, or select no expiry date. The date is never today by default. "Save and
+  add another" keeps the form open with the storage area.
+- **The screen of a food.** A tap on a card opens the product with its batches in the use-first order. The person can
+  edit the product (name, category, unit) and each batch (quantity, storage area, date added, expiry date), and add
+  a batch.
+- **Used and thrown away, with undo.** A swipe on a card records the oldest batch as used (to the end) or as thrown
+  away (to the start). The menu of a card and the screen of a food record a quantity that the person types. The
+  quantity comes from the oldest batch first. Each of these actions, each delete, and each add shows a snackbar with
+  "Undo". A delete is for a mistake, and it is only in a menu.
+- **Storage areas.** The menu of My Fridge opens the screen that creates, edits, and deletes storage areas with their
+  storage kind. Fridge and Freezer are fixed. A storage area with food cannot be deleted, and the screen says why.
+- **The change log.** The inventory is the replay of a change log in the private files of the app. Each action of the
+  person becomes changes with random identifiers. The app runs the replay before the write, and it does not write a
+  change that the core rejects. A write that fails leaves a form as it is, with a message. The table of foods is
+  `spec/foods.json`: the build copies it into the assets.
+- **Navigation.** Jetpack Navigation 3 keeps the back stack. The two tabs are the first screen, and the other screens
+  open above them with no navigation bar.
 - **Application ID.** The application ID is `com.cvke.fridge`. The debug build has the ID `com.cvke.fridge.debug` and the name
   CVKE Fridge Debug, so it can be on the same phone as the Play build.
 - **CI.** The badge above shows the result of the newest run on `main`. Select it to see all runs.
@@ -87,15 +105,21 @@ Google Play needs an Android App Bundle (AAB) signed with an upload key. Without
   ./gradlew :core:test
   ```
 - **Unit tests of the app** (`app/src/test`). `InventoryContentTest` checks what the two screens show for an inventory
-  and a date: the batches and the totals of Home, and the cards, the filters with their counts, and the sort orders of My Fridge.
+  and a date: the batches and the totals of Home, and the cards, the filters with their counts, and the sort orders of
+  My Fridge. The tests in `inventory/` check the logic of the forms and the actions with no device: the quantity
+  text, the food of a name and the estimated date (`AddFoodFormTest`), the edit forms (`EditFormsTest`), the changes
+  of each action and their result in the replay (`InventoryActionsTest`), and the instants of new changes
+  (`NewChangesTest`).
 
   ```sh
   ./gradlew :app:testDebugUnitTest
   ```
-- **Device tests** (`app/src/androidTest`) run the real app. `InventoryScreensDeviceTest` writes a change log on the
-  device and then starts the activity. It checks the screens with no food, the totals and the batches of Home, and the
-  tabs, the chips, the search field, and the sort control of My Fridge. Gradle removes the debug app from the device after
-  these tests, with its change log.
+- **Device tests** (`app/src/androidTest`) run the real app. A test writes a change log on the device and then starts
+  the activity. `InventoryScreensDeviceTest` checks the screens with no food, the totals and the batches of Home, and
+  the tabs, the chips, the search field, and the sort control of My Fridge. `InventoryChangesDeviceTest` adds food by
+  hand, records food as used with a swipe and undoes it, throws away a quantity, edits a batch, and creates a storage
+  area. It reads the screen and the replay of the change log on the device. Gradle removes the debug app from the
+  device after these tests, with its change log.
 
   ```sh
   ./gradlew :app:connectedDebugAndroidTest
@@ -103,7 +127,7 @@ Google Play needs an Android App Bundle (AAB) signed with an upload key. Without
 
 ## Sample of the debug build
 
-No screen adds food yet. To see the screens with food, the debug build can replace its change log with a sample. The
+To see the screens with food in each freshness, the debug build can replace its change log with a sample. The
 release build does not have the sample and ignores the request. The screens show that the food is a sample.
 
 ```sh
@@ -126,8 +150,9 @@ scripts/update-spec.py                        Updates or checks the copy in spec
 app/src/main/java/com/cvke/fridge/
   MainActivity.kt                             The only activity, with edge-to-edge display
   FridgeApplication.kt                        The objects that live as long as the app
-  data/                                       The change log on the phone
-  ui/                                         Home, My Fridge, the tab bar, and the view model
+  data/                                       The change log and the identifier of the phone
+  inventory/                                  The actions, the forms, and their checks, in plain Kotlin
+  ui/                                         The screens, the back stack, and the view model
   ui/theme/                                   The colour scheme, the theme, and the brand parts of the design system
 ```
 

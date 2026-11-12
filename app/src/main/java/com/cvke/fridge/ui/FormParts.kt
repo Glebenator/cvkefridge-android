@@ -296,7 +296,8 @@ fun QuantityField(
 
 /**
  * The expiry date of a form. The field shows the date and says if it is an estimated date. A tap opens the date
- * picker for the printed date. The buttons below select no expiry date, or the estimated date again.
+ * picker for the printed date. The buttons below select no expiry date, or the estimated date again. A button is
+ * there only when it changes the date.
  *
  * @param expiry The expiry date that the form saves now.
  * @param suggested The estimated date, or null when there is no estimate.
@@ -343,7 +344,7 @@ fun ExpiryField(
             supportingText = supporting,
         )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (input != ExpiryInput.None) {
+            if (expiry != null) {
                 TextButton(onClick = { onChange(ExpiryInput.None) }, Modifier.testTag("expiry_none")) {
                     Text(stringResource(R.string.no_expiry_date))
                 }
