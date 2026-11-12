@@ -58,6 +58,7 @@ fun TabsScreen(
     state: FridgeUiState,
     snackbar: SnackbarHostState,
     onAddFood: (openAreaId: String?) -> Unit,
+    onOpenFood: (productId: String) -> Unit,
     onTryAgain: () -> Unit,
 ) {
     var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
@@ -107,6 +108,7 @@ fun TabsScreen(
                         onViewAll = { showMyFridge(FoodFilter()) },
                         onShowFreshness = { showMyFridge(FoodFilter(freshness = setOf(it))) },
                         onAddFood = ::addFood,
+                        onOpenFood = onOpenFood,
                         onTryAgain = onTryAgain,
                         insets = insets,
                     )
@@ -115,6 +117,7 @@ fun TabsScreen(
                         filter,
                         onFilterChange = { filter = it },
                         onAddFood = ::addFood,
+                        onOpenFood = onOpenFood,
                         onTryAgain = onTryAgain,
                         insets = insets,
                     )

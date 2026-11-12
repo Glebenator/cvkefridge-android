@@ -85,6 +85,7 @@ fun HomeScreen(
     onViewAll: () -> Unit,
     onShowFreshness: (Freshness) -> Unit,
     onAddFood: () -> Unit,
+    onOpenFood: (productId: String) -> Unit,
     onTryAgain: () -> Unit,
     insets: PaddingValues,
     modifier: Modifier = Modifier,
@@ -138,7 +139,7 @@ fun HomeScreen(
             if (state is FridgeUiState.LoadFailed) {
                 LoadFailed(onTryAgain, Modifier.padding(side))
             } else {
-                NeedsAttention(content, onViewAll, onAddFood, side)
+                NeedsAttention(content, onViewAll, onAddFood, onOpenFood, side)
             }
         }
     }
@@ -258,6 +259,7 @@ private fun NeedsAttention(
     content: InventoryContent?,
     onViewAll: () -> Unit,
     onAddFood: () -> Unit,
+    onOpenFood: (productId: String) -> Unit,
     side: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
@@ -320,7 +322,9 @@ private fun NeedsAttention(
                         .testTag("attention_list"),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    content?.attention.orEmpty().forEach { AttentionCard(it, Modifier.fillMaxHeight()) }
+                    content?.attention.orEmpty().forEach { batch ->
+                        AttentionCard(batch, onOpen = { onOpenFood(batch.productId) }, Modifier.fillMaxHeight())
+                    }
                 }
             }
             }
@@ -402,17 +406,18 @@ private fun Notice(text: String, tag: String, modifier: Modifier = Modifier, lea
 /**
  * One batch that needs attention: the icon of its category, its name, its quantity, its category, and the days left.
  * The card has the error colours for an expired batch and the amber for an expiring batch, and the days left say the
- * same in words. Screen readers hear the card as one item.
+ * same in words. A tap opens the screen of the food. Screen readers hear the card as one item.
  */
 @Composable
-private fun AttentionCard(batch: AttentionBatch, modifier: Modifier = Modifier) {
+private fun AttentionCard(batch: AttentionBatch, onOpen: () -> Unit, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     val status = CvkeFridgeTheme.status
     val expired = batch.freshness == Freshness.EXPIRED
     val container = if (expired) scheme.errorContainer else status.warningContainer
     val onContainer = if (expired) scheme.onErrorContainer else status.onWarningContainer
     Card(
-        modifier.width(180.dp).semantics(mergeDescendants = true) {}.testTag("attention_${batch.id}"),
+        onClick = onOpen,
+        modifier.width(180.dp).testTag("attention_${batch.id}"),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(container, onContainer),
     ) {

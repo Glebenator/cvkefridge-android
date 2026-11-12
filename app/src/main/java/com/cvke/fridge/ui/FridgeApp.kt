@@ -69,11 +69,49 @@ fun FridgeApp(viewModel: FridgeViewModel) {
                     state = state,
                     snackbar = snackbar,
                     onAddFood = { open(Screen.AddFood(openAreaId = it)) },
+                    onOpenFood = { open(Screen.Food(it)) },
                     onTryAgain = viewModel::load,
                 )
             }
             entry<Screen.AddFood> { screen ->
                 AddFoodScreen(
+                    screen = screen,
+                    state = state,
+                    formWrite = formWrite,
+                    snackbar = snackbar,
+                    onPerform = viewModel::perform,
+                    onFormWriteRead = viewModel::formWriteRead,
+                    onManageAreas = null,
+                    onTryAgain = viewModel::load,
+                    onClose = { close(screen) },
+                )
+            }
+            entry<Screen.Food> { screen ->
+                FoodDetailScreen(
+                    screen = screen,
+                    state = state,
+                    snackbar = snackbar,
+                    onEditProduct = { open(Screen.EditProduct(screen.productId)) },
+                    onEditBatch = { open(Screen.EditBatch(it)) },
+                    onAddBatch = { open(Screen.AddFood(productId = screen.productId)) },
+                    onTryAgain = viewModel::load,
+                    onBack = { close(screen) },
+                )
+            }
+            entry<Screen.EditProduct> { screen ->
+                EditProductScreen(
+                    screen = screen,
+                    state = state,
+                    formWrite = formWrite,
+                    snackbar = snackbar,
+                    onPerform = viewModel::perform,
+                    onFormWriteRead = viewModel::formWriteRead,
+                    onTryAgain = viewModel::load,
+                    onClose = { close(screen) },
+                )
+            }
+            entry<Screen.EditBatch> { screen ->
+                EditBatchScreen(
                     screen = screen,
                     state = state,
                     formWrite = formWrite,

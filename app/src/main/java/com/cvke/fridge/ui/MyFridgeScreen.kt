@@ -103,6 +103,7 @@ fun MyFridgeScreen(
     filter: FoodFilter,
     onFilterChange: (FoodFilter) -> Unit,
     onAddFood: () -> Unit,
+    onOpenFood: (productId: String) -> Unit,
     onTryAgain: () -> Unit,
     insets: PaddingValues,
     modifier: Modifier = Modifier,
@@ -178,7 +179,7 @@ fun MyFridgeScreen(
                             }
                         }
                     }
-                    else -> items(rows, key = { it.key }) { FoodCard(it, Modifier.padding(side)) }
+                    else -> items(rows, key = { it.key }) { row -> FoodCard(row, onOpen = { onOpenFood(row.productId) }, Modifier.padding(side)) }
                 }
             }
         }
@@ -438,16 +439,17 @@ private fun ListMessage(text: String, tag: String, modifier: Modifier = Modifier
 /**
  * One food, as a Material list item on a card: the icon of its category, its name, its quantity, the days left of the
  * batch to use first in the colour of its freshness, and its category. A food with batches of different expiry dates
- * says how many. Screen readers hear the card as one item.
+ * says how many. A tap opens the screen of the food. Screen readers hear the card as one item.
  */
 @Composable
-private fun FoodCard(row: FoodRow, modifier: Modifier = Modifier) {
+private fun FoodCard(row: FoodRow, onOpen: () -> Unit, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     val status = freshnessColor(row.freshness)
     val separator = stringResource(R.string.meta_separator)
     val quantity = quantityText(row.quantity, row.unit)
     val expiry = expiryText(row.daysLeft, row.expiry)
     Card(
+        onClick = onOpen,
         modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainerLow),

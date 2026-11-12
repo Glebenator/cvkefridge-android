@@ -154,6 +154,28 @@
     <string name="storage_areas_manage">Manage storage areas</string>
     <string name="error_storage_area">Select a storage area.</string>
 
+    <!-- The screen of one food. -->
+    <!-- The title while the food loads. -->
+    <string name="food_title">Food</string>
+    <plurals name="food_batches">
+        <item quantity="one">%1$d batch</item>
+        <item quantity="other">%1$d batches</item>
+    </plurals>
+    <!-- On the batch that a use takes from first. -->
+    <string name="food_use_first">Use first</string>
+    <string name="food_no_batches">No batches of this food</string>
+    <string name="food_add_batch">Add a batch</string>
+    <!-- %1$s is a date. -->
+    <string name="batch_printed_date">Printed date: %1$s</string>
+    <string name="batch_estimated_date">Estimated date: %1$s</string>
+    <string name="batch_date_added">Added %1$s</string>
+
+    <!-- The forms that edit a product and a batch. -->
+    <string name="edit_food">Edit food</string>
+    <string name="edit_batch">Edit batch</string>
+    <string name="edit_food_unit_note">The unit is the unit of all batches of this food.</string>
+    <string name="field_date_added">Date added</string>
+
     <!-- The expiry date of a form. -->
     <string name="no_expiry_date">No expiry date</string>
     <string name="expiry_use_estimate">Use the estimated date</string>

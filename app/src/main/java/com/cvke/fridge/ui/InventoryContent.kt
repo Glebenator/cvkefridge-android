@@ -17,6 +17,7 @@ import com.cvke.fridge.core.UseFirst
  */
 data class AttentionBatch(
     val id: String,
+    val productId: String,
     val name: String,
     val category: Category,
     val quantity: Long,
@@ -32,7 +33,9 @@ data class AreaSummary(val id: String, val name: String, val foodCount: Int)
 /**
  * One food in one storage area: all active batches of a product there.
  *
+ * @property batchIds The batches, in the use-first order.
  * @property quantity The sum of the batches, in thousandths.
+ * @property firstQuantity The quantity of the batch to use first, in thousandths.
  * @property dateAdded The date added of the newest batch.
  * @property expiry The expiry date of the batch to use first, or null.
  * @property freshness The freshness of the batch to use first.
@@ -41,9 +44,12 @@ data class AreaSummary(val id: String, val name: String, val foodCount: Int)
  */
 data class FoodRow(
     val key: String,
+    val productId: String,
+    val batchIds: List<String>,
     val name: String,
     val category: Category,
     val quantity: Long,
+    val firstQuantity: Long,
     val unit: MeasureUnit?,
     val areaId: String,
     val areaName: String,
@@ -179,19 +185,23 @@ data class InventoryContent(
                 val daysLeft = today.daysUntil(expiry.date)
                 val freshness = Freshness.of(daysLeft)
                 if (freshness != Freshness.EXPIRED && freshness != Freshness.EXPIRING) return@mapNotNull null
-                AttentionBatch(batch.id, product.name, product.category, batch.quantity, product.unit, expiry, daysLeft, freshness)
+                AttentionBatch(batch.id, product.id, product.name, product.category, batch.quantity, product.unit, expiry, daysLeft, freshness)
             }
 
             val areaIndex = areas.withIndex().associate { (index, area) -> area.id to index }
             val foods = active.groupBy { it.productId to it.storageAreaId }.map { (key, batches) ->
                 val product = products.getValue(key.first)
-                val first = UseFirst.order(batches).first()
+                val ordered = UseFirst.order(batches)
+                val first = ordered.first()
                 val daysLeft = Freshness.daysLeft(today, first.expiry?.date)
                 FoodRow(
                     key = "${key.first}/${key.second}",
+                    productId = key.first,
+                    batchIds = ordered.map(Batch::id),
                     name = product.name,
                     category = product.category,
                     quantity = batches.sumOf(Batch::quantity),
+                    firstQuantity = first.quantity,
                     unit = product.unit,
                     areaId = key.second,
                     areaName = areaNames.getValue(key.second),
