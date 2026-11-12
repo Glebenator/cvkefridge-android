@@ -19,6 +19,14 @@ import com.cvke.fridge.ui.theme.CvkeFridgeTheme
 import java.math.BigDecimal
 import java.text.NumberFormat
 
+/** A whole number in the format of the locale. */
+@Composable
+fun numberFormat(): (Int) -> String {
+    val locale = LocalConfiguration.current.locales[0]
+    val format = remember(locale) { NumberFormat.getIntegerInstance(locale) }
+    return { format.format(it) }
+}
+
 /** A quantity in thousandths with its unit, for the locale of the device: "1.5 l", "2 packs", "3". */
 @Composable
 fun quantityText(quantity: Long, unit: MeasureUnit?): String {

@@ -2,7 +2,9 @@ package com.cvke.fridge
 
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -88,8 +90,21 @@ class InventoryScreensDeviceTest {
         // A fresh batch is not on Home.
         rule.onAllNodesWithTag("attention_sample-batch-6").assertCountEquals(0)
 
+        // The number of expiring batches opens My Fridge with the food that is expiring.
+        rule.onNodeWithTag("metric_expiring").performScrollTo().performClick()
+        rule.onNodeWithTag("my_fridge_screen").assertIsDisplayed()
+        rule.onNodeWithTag("area_all").assertIsSelected()
+        rule.onNodeWithTag("filter_expiring").assertIsSelected()
+        rule.onNodeWithTag("filter_expired").assertIsNotSelected()
+        rule.onNodeWithText("Baby spinach").assertIsDisplayed()
+        rule.onAllNodesWithTag("food_sample-chicken/fridge").assertCountEquals(0)
+
+        // "View all" opens My Fridge with no filter.
+        rule.onNodeWithTag("tab_home").performClick()
         rule.onNodeWithTag("view_all").performScrollTo().performClick()
         rule.onNodeWithTag("my_fridge_screen").assertIsDisplayed()
+        rule.onNodeWithTag("filter_expiring").assertIsNotSelected()
+        rule.onNodeWithText("Chicken thighs").assertIsDisplayed()
     }
 
     @Test
@@ -107,18 +122,43 @@ class InventoryScreensDeviceTest {
         rule.onNodeWithText("Tomato ketchup").assertIsDisplayed()
         rule.onAllNodesWithTag("food_sample-milk/fridge").assertCountEquals(0)
 
-        rule.onNodeWithTag("chip_area_freezer").performScrollTo().performClick().assertIsSelected()
+        // The storage areas are tabs. The search text stays when the tab changes.
+        rule.onNodeWithTag("area_freezer").performClick().assertIsSelected()
         rule.onNodeWithText("No matching items").assertIsDisplayed()
+        rule.onAllNodesWithTag("filter_clear").assertCountEquals(0)
         rule.onNodeWithTag("search_clear").performClick()
         rule.onNodeWithText("Garden peas").assertIsDisplayed()
         rule.onNodeWithText("Sourdough bread").assertIsDisplayed()
 
-        rule.onNodeWithTag("chip_category_bakery").performScrollTo().performClick().assertIsSelected()
+        // The menu of the category chip has the categories with food in the Freezer, with the number of foods.
+        rule.onNodeWithTag("filter_category").performClick()
+        rule.onNode(hasTestTag("category_all") and hasContentDescription("All categories, 2 items")).assertIsDisplayed()
+        rule.onAllNodesWithTag("category_dairy").assertCountEquals(0)
+        rule.onNodeWithTag("category_bakery").performClick()
+        rule.onNode(hasTestTag("filter_category") and hasText("Bakery")).assertIsSelected()
         rule.onNodeWithText("Sourdough bread").assertIsDisplayed()
         rule.onAllNodesWithTag("food_sample-peas/freezer").assertCountEquals(0)
 
-        rule.onNodeWithTag("chip_area_all").performScrollTo().performClick()
-        rule.onNodeWithTag("chip_category_all").performScrollTo().performClick()
+        // No bakery food in the Freezer is expired. "Clear filters" shows the food of the Freezer again.
+        rule.onNode(hasTestTag("filter_expired") and hasContentDescription("Freshness: Expired, 0 items")).performClick().assertIsSelected()
+        rule.onNodeWithText("No matching items").assertIsDisplayed()
+        rule.onNodeWithTag("filter_clear").performClick()
+        rule.onNodeWithTag("filter_expired").assertIsNotSelected()
+        rule.onNode(hasTestTag("filter_category") and hasText("Category")).assertIsNotSelected()
+        rule.onNodeWithText("Garden peas").assertIsDisplayed()
+
+        // The two freshness chips together show the food that is expiring or expired.
+        rule.onNodeWithTag("area_all").performClick().assertIsSelected()
+        rule.onNodeWithTag("filter_expired").performClick()
+        rule.onNodeWithText("Chicken thighs").assertIsDisplayed()
+        rule.onAllNodesWithTag("food_sample-spinach/fridge").assertCountEquals(0)
+        rule.onNodeWithTag("filter_expiring").performClick()
+        rule.onNodeWithText("Chicken thighs").assertIsDisplayed()
+        rule.onNodeWithText("Baby spinach").assertIsDisplayed()
+        rule.onAllNodesWithTag("food_sample-cheddar/fridge").assertCountEquals(0)
+        rule.onNodeWithTag("filter_expired").performClick()
+        rule.onNodeWithTag("filter_expiring").performClick()
+
         rule.onNodeWithTag("sort_key").performClick()
         rule.onNodeWithTag("sort_option_name").performClick()
         list.performScrollToNode(hasTestTag("food_sample-spinach/fridge"))

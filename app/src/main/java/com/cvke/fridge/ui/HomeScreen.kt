@@ -5,6 +5,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -43,13 +45,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -73,12 +76,14 @@ import java.time.LocalTime
  * Home, the first screen. Its contents are those of the Home screen of FridgeFriend (`app/(tabs)/index.tsx` in the
  * `basic_ff` repository): a greeting, a card with the totals, and the batches that need attention. The parts are
  * Material 3 components. The parts of FridgeFriend that need a function that this app does not have yet are not
- * here: the settings button, the sessions, and the add button.
+ * here: the settings button, the sessions, and the add button. A tap on the number of expiring or expired batches
+ * calls [onShowFreshness], and My Fridge then shows the food with that freshness.
  */
 @Composable
 fun HomeScreen(
     state: FridgeUiState,
     onViewAll: () -> Unit,
+    onShowFreshness: (Freshness) -> Unit,
     onTryAgain: () -> Unit,
     insets: PaddingValues,
     modifier: Modifier = Modifier,
@@ -124,7 +129,7 @@ fun HomeScreen(
                     }
                 }
                 Spacer(Modifier.height(20.dp))
-                TotalsCard(content)
+                TotalsCard(content, onShowFreshness)
                 if (content?.sample == true) SampleNote(Modifier.padding(top = 16.dp))
             }
             Spacer(Modifier.height(24.dp))
@@ -154,9 +159,12 @@ private fun greeting(): String {
     )
 }
 
-/** The card with the totals: the number of foods, and the numbers of expiring and expired batches. */
+/**
+ * The card with the totals: the number of foods, and the numbers of expiring and expired batches. Each of the two
+ * numbers of batches is a button when the inventory is loaded.
+ */
 @Composable
-private fun TotalsCard(content: InventoryContent?, modifier: Modifier = Modifier) {
+private fun TotalsCard(content: InventoryContent?, onShowFreshness: (Freshness) -> Unit, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     val status = CvkeFridgeTheme.status
     val noValue = stringResource(R.string.hero_no_value)
@@ -193,6 +201,8 @@ private fun TotalsCard(content: InventoryContent?, modifier: Modifier = Modifier
                     status.warning,
                     status.warningContainer,
                     status.onWarningContainer,
+                    enabled = content != null,
+                    onClick = { onShowFreshness(Freshness.EXPIRING) },
                     Modifier.weight(1f).testTag("metric_expiring"),
                 )
                 Metric(
@@ -202,6 +212,8 @@ private fun TotalsCard(content: InventoryContent?, modifier: Modifier = Modifier
                     scheme.error,
                     scheme.errorContainer,
                     scheme.onErrorContainer,
+                    enabled = content != null,
+                    onClick = { onShowFreshness(Freshness.EXPIRED) },
                     Modifier.weight(1f).testTag("metric_expired"),
                 )
             }
@@ -209,7 +221,7 @@ private fun TotalsCard(content: InventoryContent?, modifier: Modifier = Modifier
     }
 }
 
-/** One number of the card with its name. Screen readers hear the two as one item. */
+/** One number of the card with its name, as a button. Screen readers hear the two as one item. */
 @Composable
 private fun Metric(
     @DrawableRes icon: Int,
@@ -218,10 +230,15 @@ private fun Metric(
     color: Color,
     container: Color,
     onContainer: Color,
+    enabled: Boolean,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier.semantics(mergeDescendants = true) {},
+        modifier
+            .clip(MaterialTheme.shapes.medium)
+            .clickable(enabled, onClickLabel = stringResource(R.string.metric_show), role = Role.Button, onClick = onClick)
+            .heightIn(min = 48.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -416,12 +433,4 @@ private fun AttentionCard(batch: AttentionBatch, modifier: Modifier = Modifier) 
             }
         }
     }
-}
-
-/** A whole number in the format of the locale. */
-@Composable
-private fun numberFormat(): (Int) -> String {
-    val locale = LocalConfiguration.current.locales[0]
-    val format = remember(locale) { java.text.NumberFormat.getIntegerInstance(locale) }
-    return { format.format(it) }
 }

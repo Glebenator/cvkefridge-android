@@ -16,8 +16,9 @@ CVKE Fridge has three repositories:
 ## Status
 
 - **Two screens that read the inventory.** Home shows the totals and the first expired and expiring batches. My
-  Fridge shows one card for each food in each storage area, with chips for the storage area and the category, a
-  search field, and a sort control. The two screens have the contents of FridgeFriend (the `basic_ff` repository), with
+  Fridge shows one card for each food in each storage area, with tabs for the storage areas, a search field, one row
+  of chips for the category and the freshness, and a sort control. A tap on the number of expiring or expired batches
+  on Home opens My Fridge with that freshness. The two screens have the contents of FridgeFriend (the `basic_ff` repository), with
   Material 3 components. The colours are a Material 3 colour scheme from its green, and the text starts from its
   text. The app does not use the wallpaper colours. The brand parts come from the design system of the owner: the
   signature gradient on the app icon and on the icon of the product, About with the cvke letters, the slice in an
@@ -86,14 +87,14 @@ Google Play needs an Android App Bundle (AAB) signed with an upload key. Without
   ./gradlew :core:test
   ```
 - **Unit tests of the app** (`app/src/test`). `InventoryContentTest` checks what the two screens show for an inventory
-  and a date: the batches and the totals of Home, and the cards, the filter, and the sort orders of My Fridge.
+  and a date: the batches and the totals of Home, and the cards, the filters with their counts, and the sort orders of My Fridge.
 
   ```sh
   ./gradlew :app:testDebugUnitTest
   ```
 - **Device tests** (`app/src/androidTest`) run the real app. `InventoryScreensDeviceTest` writes a change log on the
   device and then starts the activity. It checks the screens with no food, the totals and the batches of Home, and the
-  chips, the search field, and the sort control of My Fridge. Gradle removes the debug app from the device after
+  tabs, the chips, the search field, and the sort control of My Fridge. Gradle removes the debug app from the device after
   these tests, with its change log.
 
   ```sh

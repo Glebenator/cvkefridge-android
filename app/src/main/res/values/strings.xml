@@ -17,6 +17,8 @@
     <string name="hero_no_value">—</string>
     <string name="metric_expiring">Expiring</string>
     <string name="metric_expired">Expired</string>
+    <!-- For screen readers: what a tap on "Expiring" or "Expired" does. -->
+    <string name="metric_show">Show in My Fridge</string>
     <string name="attention_title">Needs attention</string>
     <string name="attention_view_all">View all</string>
     <string name="attention_none_title">All fresh</string>
@@ -52,14 +54,26 @@
     <!-- My Fridge -->
     <string name="search_placeholder">Search items</string>
     <string name="search_clear">Clear search</string>
-    <string name="chip_all">All</string>
-    <!-- For screen readers: the two rows of chips. -->
-    <string name="chips_storage_area">Storage area</string>
-    <string name="chips_category">Category</string>
-    <!-- For screen readers: one chip. %1$s is the row, %2$s the chip, for example "Storage area: Freezer". -->
-    <string name="chip_description">%1$s: %2$s</string>
-    <!-- There is food, but none for the chips and the search text. -->
+    <!-- The tab of all storage areas. The other tabs have the names of the storage areas. -->
+    <string name="area_all">All</string>
+    <!-- The chip that opens the list of categories, when no category is selected. Also for screen readers: the group. -->
+    <string name="filter_category">Category</string>
+    <string name="category_all">All categories</string>
+    <string name="filter_expiring">Expiring</string>
+    <string name="filter_expired">Expired</string>
+    <!-- For screen readers: the groups of the tabs and of the two freshness chips. -->
+    <string name="filter_storage_area">Storage area</string>
+    <string name="filter_freshness">Freshness</string>
+    <!-- For screen readers: one tab or chip. %1$s is the group, %2$s the value, for example "Storage area: Freezer". -->
+    <string name="filter_description">%1$s: %2$s</string>
+    <!-- For screen readers: a filter with its number of foods. %1$s is the filter, for example "Dairy, 3 items". -->
+    <plurals name="filter_count_description">
+        <item quantity="one">%1$s, %2$d item</item>
+        <item quantity="other">%1$s, %2$d items</item>
+    </plurals>
+    <!-- There is food, but none for the filters and the search text. -->
     <string name="list_no_match">No matching items</string>
+    <string name="filter_clear">Clear filters</string>
     <plurals name="expiry_date_count">
         <item quantity="one">%1$d expiry date</item>
         <item quantity="other">%1$d expiry dates</item>

@@ -26,7 +26,7 @@ data class AttentionBatch(
     val freshness: Freshness,
 )
 
-/** A storage area that has food, with the number of foods in it. */
+/** A storage area, with the number of foods in it. The number is 0 for a storage area with no food. */
 data class AreaSummary(val id: String, val name: String, val foodCount: Int)
 
 /**
@@ -35,6 +35,8 @@ data class AreaSummary(val id: String, val name: String, val foodCount: Int)
  * @property quantity The sum of the batches, in thousandths.
  * @property dateAdded The date added of the newest batch.
  * @property expiry The expiry date of the batch to use first, or null.
+ * @property freshness The freshness of the batch to use first.
+ * @property batchFreshness The freshness of each batch. A food can have an expired batch and an expiring batch.
  * @property expiryDateCount The number of different expiry dates of the batches.
  */
 data class FoodRow(
@@ -49,7 +51,53 @@ data class FoodRow(
     val expiry: ExpiryDate?,
     val daysLeft: Int?,
     val freshness: Freshness,
+    val batchFreshness: Set<Freshness>,
     val expiryDateCount: Int,
+)
+
+/**
+ * The filters of My Fridge.
+ *
+ * @property areaId The storage area, or null for all.
+ * @property category The category, or null for all.
+ * @property freshness The freshness values to show. A food is shown when one of its batches has one of them. The
+ *   empty set shows all food.
+ * @property query The search text.
+ */
+data class FoodFilter(
+    val areaId: String? = null,
+    val category: Category? = null,
+    val freshness: Set<Freshness> = emptySet(),
+    val query: String = "",
+)
+
+/** A category that has food in the selected storage area, with the number of foods that its menu item shows. */
+data class CategoryCount(val category: Category, val foodCount: Int)
+
+/**
+ * What My Fridge shows for a [FoodFilter]. Each count is the number of rows that the list has when the person selects
+ * that value and does not change the other filters.
+ *
+ * @property areaId The storage area of the filter, or null for all. It is also null when the storage area of the
+ *   filter is not there.
+ * @property category The category of the filter, or null for all. It is also null when the category of the filter has
+ *   no food in the storage area.
+ * @property areaFoodCount The number of foods in the storage area, with no other filter.
+ * @property categories The categories with food in the storage area, in the order of [Category].
+ * @property allCategoriesCount The count for "All categories".
+ * @property expiringCount The count for "Expiring".
+ * @property expiredCount The count for "Expired".
+ * @property rows The rows that agree with all filters, in the order of [InventoryContent.foods].
+ */
+data class FilteredFoods(
+    val areaId: String?,
+    val category: Category?,
+    val areaFoodCount: Int,
+    val categories: List<CategoryCount>,
+    val allCategoriesCount: Int,
+    val expiringCount: Int,
+    val expiredCount: Int,
+    val rows: List<FoodRow>,
 )
 
 /**
@@ -71,8 +119,7 @@ enum class SortKey(val ascendingFirst: Boolean) {
  * @property attention The first expired and expiring batches, in the use-first order.
  * @property expiredCount The number of all expired batches.
  * @property expiringCount The number of all expiring batches.
- * @property areas The storage areas with food: Fridge, Freezer, and then the others by name.
- * @property categories The categories with food, in the order of [Category].
+ * @property areas All storage areas: Fridge, Freezer, and then the others by name.
  * @property foods One row for each food in each storage area, in the order of [areas] and then by name.
  * @property foodCount The number of products with an active batch.
  * @property sample True when a change in the log comes from the sample of the debug build.
@@ -82,11 +129,39 @@ data class InventoryContent(
     val expiredCount: Int,
     val expiringCount: Int,
     val areas: List<AreaSummary>,
-    val categories: List<Category>,
     val foods: List<FoodRow>,
     val foodCount: Int,
     val sample: Boolean,
 ) {
+    /**
+     * The rows and the counts for [filter]. The search text is compared with the name, the category, the unit, and the
+     * name of the storage area. Case has no effect.
+     */
+    fun filtered(filter: FoodFilter): FilteredFoods {
+        val area = areas.firstOrNull { it.id == filter.areaId }
+        val inArea = if (area == null) foods else foods.filter { it.areaId == area.id }
+        val category = filter.category?.takeIf { wanted -> inArea.any { it.category == wanted } }
+        val text = filter.query.trim()
+        val found = inArea.filter { row ->
+            text.isEmpty() || listOfNotNull(row.name, row.category.key, row.unit?.key, row.areaName)
+                .any { it.contains(text, ignoreCase = true) }
+        }
+        // The counts of one filter are for the rows that agree with the search text and with the other filter.
+        val withFreshness = found.filter { row -> filter.freshness.isEmpty() || row.batchFreshness.any { it in filter.freshness } }
+        val withCategory = found.filter { category == null || it.category == category }
+        return FilteredFoods(
+            areaId = area?.id,
+            category = category,
+            areaFoodCount = inArea.size,
+            categories = Category.entries.filter { entry -> inArea.any { it.category == entry } }
+                .map { entry -> CategoryCount(entry, withFreshness.count { it.category == entry }) },
+            allCategoriesCount = withFreshness.size,
+            expiringCount = withCategory.count { Freshness.EXPIRING in it.batchFreshness },
+            expiredCount = withCategory.count { Freshness.EXPIRED in it.batchFreshness },
+            rows = withFreshness.filter { category == null || it.category == category },
+        )
+    }
+
     companion object {
         /** The largest number of batches that Home shows. */
         const val ATTENTION_COUNT = 5
@@ -124,6 +199,7 @@ data class InventoryContent(
                     expiry = first.expiry,
                     daysLeft = daysLeft,
                     freshness = Freshness.of(daysLeft),
+                    batchFreshness = batches.mapTo(HashSet()) { Freshness.of(Freshness.daysLeft(today, it.expiry?.date)) },
                     expiryDateCount = batches.mapNotNull { it.expiry?.date }.distinct().size,
                 )
             }.sortedWith(
@@ -136,29 +212,11 @@ data class InventoryContent(
                 attention = useFirst.take(ATTENTION_COUNT),
                 expiredCount = useFirst.count { it.freshness == Freshness.EXPIRED },
                 expiringCount = useFirst.count { it.freshness == Freshness.EXPIRING },
-                areas = areas.mapNotNull { area ->
-                    val count = foods.count { it.areaId == area.id }
-                    if (count == 0) null else AreaSummary(area.id, area.name, count)
-                },
-                categories = Category.entries.filter { category -> foods.any { it.category == category } },
+                areas = areas.map { area -> AreaSummary(area.id, area.name, foods.count { it.areaId == area.id }) },
                 foods = foods,
                 foodCount = active.map { it.productId }.distinct().size,
                 sample = sample,
             )
-        }
-
-        /**
-         * The rows of one storage area and one category, or of all for null, that have [query] in the name, the
-         * category, the unit, or the name of the storage area. Case has no effect.
-         */
-        fun filter(foods: List<FoodRow>, areaId: String?, category: Category?, query: String): List<FoodRow> {
-            val text = query.trim()
-            return foods.filter { row ->
-                (areaId == null || row.areaId == areaId) &&
-                    (category == null || row.category == category) &&
-                    (text.isEmpty() || listOfNotNull(row.name, row.category.key, row.unit?.key, row.areaName)
-                        .any { it.contains(text, ignoreCase = true) })
-            }
         }
 
         /**

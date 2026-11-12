@@ -42,13 +42,21 @@ enum class Tab(
 
 /**
  * The app: the screen of the selected tab, and the Material navigation bar below it. A tab change is instant. Each
- * tab keeps its scroll position, and My Fridge keeps its chips, its search text, and its sort order. Back on My Fridge
- * goes to Home.
+ * tab keeps its scroll position, and My Fridge keeps its filters, its search text, and its sort order. Back on My
+ * Fridge goes to Home.
+ *
+ * The filter of My Fridge is here, because Home opens My Fridge with a filter: "View all" shows all food, and the
+ * number of expiring or expired batches shows the food with that freshness in all storage areas.
  */
 @Composable
 fun FridgeApp(state: FridgeUiState, onTryAgain: () -> Unit) {
     var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
+    var filter by rememberSaveable(stateSaver = FoodFilterSaver) { mutableStateOf(FoodFilter()) }
     val screens = rememberSaveableStateHolder()
+    fun showMyFridge(with: FoodFilter) {
+        filter = with
+        tab = Tab.MY_FRIDGE
+    }
     BackHandler(enabled = tab != Tab.HOME) { tab = Tab.HOME }
 
     // The navigation bar is at the bottom edge, so the screens get the insets of the other three edges.
@@ -57,8 +65,14 @@ fun FridgeApp(state: FridgeUiState, onTryAgain: () -> Unit) {
         Box(Modifier.weight(1f)) {
             screens.SaveableStateProvider(tab.name) {
                 when (tab) {
-                    Tab.HOME -> HomeScreen(state, onViewAll = { tab = Tab.MY_FRIDGE }, onTryAgain = onTryAgain, insets = insets)
-                    Tab.MY_FRIDGE -> MyFridgeScreen(state, onTryAgain = onTryAgain, insets = insets)
+                    Tab.HOME -> HomeScreen(
+                        state,
+                        onViewAll = { showMyFridge(FoodFilter()) },
+                        onShowFreshness = { showMyFridge(FoodFilter(freshness = setOf(it))) },
+                        onTryAgain = onTryAgain,
+                        insets = insets,
+                    )
+                    Tab.MY_FRIDGE -> MyFridgeScreen(state, filter, onFilterChange = { filter = it }, onTryAgain = onTryAgain, insets = insets)
                 }
             }
         }

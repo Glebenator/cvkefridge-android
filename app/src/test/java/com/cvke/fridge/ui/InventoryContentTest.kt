@@ -91,7 +91,6 @@ class InventoryContentTest {
     fun countsAreForProductsWithAnActiveBatch() {
         assertEquals(6, sample.foodCount)
         assertEquals(listOf("fridge" to 3, "freezer" to 1, "pantry" to 3), sample.areas.map { it.id to it.foodCount })
-        assertEquals(listOf(Category.DAIRY, Category.OTHER), sample.categories)
     }
 
     @Test
@@ -104,13 +103,14 @@ class InventoryContentTest {
         assertEquals(0, used.foodCount)
         assertEquals(emptyList<AttentionBatch>(), used.attention)
         assertEquals(emptyList<FoodRow>(), used.foods)
-        assertEquals(emptyList<AreaSummary>(), used.areas)
+        // A storage area with no food stays in the list, so that its tab does not go away.
+        assertEquals(listOf("fridge" to 0, "freezer" to 0), used.areas.map { it.id to it.foodCount })
     }
 
     @Test
     fun filterIsForOneStorageAreaOneCategoryAndTheSearchText() {
         fun keys(areaId: String?, category: Category?, query: String) =
-            InventoryContent.filter(sample.foods, areaId, category, query).map { it.key }
+            sample.filtered(FoodFilter(areaId, category, query = query)).rows.map { it.key }
         assertEquals(listOf("milk/fridge", "milk/freezer"), keys(null, null, " MIL "))
         assertEquals(listOf("milk/freezer"), keys("freezer", null, ""))
         assertEquals(emptyList<String>(), keys("freezer", null, "jam"))
@@ -119,6 +119,88 @@ class InventoryContentTest {
         // The search text is also in the category, the unit, and the name of the storage area.
         assertEquals(listOf("milk/fridge", "milk/freezer"), keys(null, null, "dairy"))
         assertEquals(listOf("jam/pantry", "rice/pantry", "tea/pantry"), keys(null, null, "pantry"))
+    }
+
+    @Test
+    fun filterIsForTheFreshnessOfEachBatchOfAFood() {
+        fun keys(vararg freshness: Freshness, areaId: String? = null) =
+            sample.filtered(FoodFilter(areaId, freshness = freshness.toSet())).rows.map { it.key }
+        assertEquals(listOf("milk/fridge"), keys(Freshness.EXPIRING))
+        assertEquals(listOf("eggs/fridge"), keys(Freshness.EXPIRED))
+        // The two values together show the food that has one of them.
+        assertEquals(listOf("eggs/fridge", "milk/fridge"), keys(Freshness.EXPIRING, Freshness.EXPIRED))
+        assertEquals(emptyList<String>(), keys(Freshness.EXPIRING, areaId = "pantry"))
+
+        // A food with an expired batch and an expiring batch is one row, and each of the two filters shows it.
+        val mixed = content(
+            product("milk", "Milk"),
+            batch("b1", "milk", "fridge", "2026-11-01", "2026-11-10"),
+            batch("b2", "milk", "fridge", "2026-11-05", "2026-11-12"),
+            batch("b3", "milk", "fridge", "2026-11-10", "2026-11-30"),
+        )
+        assertEquals(Freshness.EXPIRED, mixed.foods.single().freshness)
+        assertEquals(setOf(Freshness.EXPIRED, Freshness.EXPIRING, Freshness.FRESH), mixed.foods.single().batchFreshness)
+        assertEquals(1, mixed.filtered(FoodFilter(freshness = setOf(Freshness.EXPIRING))).rows.size)
+        assertEquals(1, mixed.filtered(FoodFilter(freshness = setOf(Freshness.EXPIRED))).rows.size)
+    }
+
+    @Test
+    fun aFilterValueThatIsNotThereShowsAll() {
+        // No storage area has this identifier.
+        val gone = sample.filtered(FoodFilter(areaId = "cellar"))
+        assertEquals(null, gone.areaId)
+        assertEquals(7, gone.rows.size)
+        // The Pantry has no dairy.
+        val noDairy = sample.filtered(FoodFilter(areaId = "pantry", category = Category.DAIRY))
+        assertEquals("pantry", noDairy.areaId)
+        assertEquals(null, noDairy.category)
+        assertEquals(listOf("jam/pantry", "rice/pantry", "tea/pantry"), noDairy.rows.map { it.key })
+        // A storage area with no food is a storage area. It does not show all.
+        val empty = content(product("milk", "Milk"), batch("b1", "milk", "fridge", "2026-11-05", null))
+            .filtered(FoodFilter(areaId = "freezer"))
+        assertEquals("freezer", empty.areaId)
+        assertEquals(0, empty.areaFoodCount)
+        assertEquals(emptyList<FoodRow>(), empty.rows)
+    }
+
+    @Test
+    fun countsAreForTheStorageAreaTheSearchTextAndTheOtherFilter() {
+        fun categories(view: FilteredFoods) = view.categories.map { it.category to it.foodCount }
+
+        val all = sample.filtered(FoodFilter())
+        assertEquals(7, all.areaFoodCount)
+        assertEquals(7, all.allCategoriesCount)
+        assertEquals(listOf(Category.DAIRY to 2, Category.OTHER to 5), categories(all))
+        assertEquals(1, all.expiringCount)
+        assertEquals(1, all.expiredCount)
+
+        // The menu has the categories with food in the storage area.
+        val freezer = sample.filtered(FoodFilter(areaId = "freezer"))
+        assertEquals(1, freezer.areaFoodCount)
+        assertEquals(listOf(Category.DAIRY to 1), categories(freezer))
+        assertEquals(0, freezer.expiringCount)
+
+        // A category count is for the selected freshness. A category with no such food stays in the menu.
+        val expired = sample.filtered(FoodFilter(freshness = setOf(Freshness.EXPIRED)))
+        assertEquals(1, expired.allCategoriesCount)
+        assertEquals(listOf(Category.DAIRY to 0, Category.OTHER to 1), categories(expired))
+        // The count of a freshness chip does not change when the chip is on.
+        assertEquals(1, expired.expiringCount)
+        assertEquals(1, expired.expiredCount)
+
+        // A freshness count is for the selected category.
+        val dairy = sample.filtered(FoodFilter(category = Category.DAIRY))
+        assertEquals(1, dairy.expiringCount)
+        assertEquals(0, dairy.expiredCount)
+        assertEquals(7, dairy.allCategoriesCount)
+
+        // All counts are for the search text. The number of foods in the storage area is not.
+        val search = sample.filtered(FoodFilter(query = "eggs"))
+        assertEquals(7, search.areaFoodCount)
+        assertEquals(1, search.allCategoriesCount)
+        assertEquals(listOf(Category.DAIRY to 0, Category.OTHER to 1), categories(search))
+        assertEquals(0, search.expiringCount)
+        assertEquals(1, search.expiredCount)
     }
 
     @Test
