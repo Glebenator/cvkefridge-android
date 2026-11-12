@@ -398,7 +398,7 @@
     <string name="notifications_blocked_body">Notifications for CVKE Fridge are off. To get reminders, open the settings and turn them on.</string>
     <string name="notifications_channel_off_body">The notification category Expiry reminders is off. To get reminders, open the settings and turn it on.</string>
     <!-- On the settings screen, when reminders are on and Android does not show them. -->
-    <string name="notifications_denied_status">You did not allow notifications, so reminders cannot show.</string>
+    <string name="notifications_denied_status">Notifications for CVKE Fridge are not allowed, so reminders cannot show.</string>
     <string name="notifications_blocked_status">Notifications for CVKE Fridge are off in the settings of Android, so reminders cannot show.</string>
     <string name="notifications_channel_off_status">The notification category Expiry reminders is off in the settings of Android, so reminders cannot show.</string>
     <string name="action_allow_notifications">Allow notifications</string>

@@ -16,10 +16,11 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -169,7 +170,12 @@ private fun AccessProblem(access: NotificationAccess, onFix: () -> Unit, modifie
                 Icon(painterResource(R.drawable.ic_bell_off), contentDescription = null)
                 Text(stringResource(text), style = MaterialTheme.typography.bodyMedium)
             }
-            FilledTonalButton(onFix, Modifier.align(Alignment.End).testTag("notification_access_fix")) { Text(stringResource(action)) }
+            // The button has the error colours of the scheme, so it belongs to the card.
+            Button(
+                onClick = onFix,
+                modifier = Modifier.align(Alignment.End).testTag("notification_access_fix"),
+                colors = ButtonDefaults.buttonColors(containerColor = scheme.error, contentColor = scheme.onError),
+            ) { Text(stringResource(action)) }
         }
     }
 }
