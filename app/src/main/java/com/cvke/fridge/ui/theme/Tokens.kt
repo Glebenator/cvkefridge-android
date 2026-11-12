@@ -1,127 +1,127 @@
 package com.cvke.fridge.ui.theme
 
-import androidx.compose.animation.core.Easing
-import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-/** The design-language colour tokens. Material roles map to them in [CvkeFridgeTheme]. Brand colours are for brand art only. */
-@Immutable
-data class CvkeFridgeColors(
-    val bg: Color,
-    val surface: Color,
-    val surfaceSunken: Color,
-    val border: Color,
-    val borderControl: Color,
-    val ink: Color,
-    val inkMuted: Color,
-    val accent: Color,
-    val accentInk: Color,
-    val accentSubtle: Color,
-    /** Text and icons on [accentSubtle]. It is [accent] in the app colours. */
-    val accentOnSubtle: Color,
-    val brandApricot: Color,
-    val brandApricotSubtle: Color,
-    val gradientEnd: Color,
-    val success: Color,
-    val warning: Color,
-    val warningSubtle: Color,
-    val danger: Color,
-    val dangerInk: Color,
-    val dangerSubtle: Color,
-    val scrim: Color,
+// The colours of the app are a Material 3 colour scheme from the green of FridgeFriend, #53D181 (`primary` in
+// `styles/theme.ts` of the `basic_ff` repository). They come from material-color-utilities 0.3.0 with the scheme
+// "fidelity", which keeps the green as it is in `primaryContainer`. Each pair of a colour and its "on" colour has a
+// contrast of 4.5:1 or more. Do not change one value by hand: make the scheme again from the seed colour.
+
+internal val LightScheme = lightColorScheme(
+    primary = Color(0xFF006D38),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFF53D181),
+    onPrimaryContainer = Color(0xFF00562B),
+    secondary = Color(0xFF3C6848),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFBAECC3),
+    onSecondaryContainer = Color(0xFF406C4C),
+    tertiary = Color(0xFF924B2B),
+    onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Color(0xFFFFA37D),
+    onTertiaryContainer = Color(0xFF783719),
+    error = Color(0xFFBA1A1A),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFFFDAD6),
+    onErrorContainer = Color(0xFF93000A),
+    background = Color(0xFFF4FBF2),
+    onBackground = Color(0xFF171D17),
+    surface = Color(0xFFF4FBF2),
+    onSurface = Color(0xFF171D17),
+    surfaceVariant = Color(0xFFD8E6D7),
+    onSurfaceVariant = Color(0xFF3D4A3F),
+    outline = Color(0xFF6D7A6E),
+    outlineVariant = Color(0xFFBCCABC),
+    scrim = Color(0xFF000000),
+    inverseSurface = Color(0xFF2B322C),
+    inverseOnSurface = Color(0xFFECF3E9),
+    inversePrimary = Color(0xFF61DE8C),
+    surfaceDim = Color(0xFFD5DCD3),
+    surfaceBright = Color(0xFFF4FBF2),
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    surfaceContainerLow = Color(0xFFEFF6EC),
+    surfaceContainer = Color(0xFFE9F0E6),
+    surfaceContainerHigh = Color(0xFFE3EAE1),
+    surfaceContainerHighest = Color(0xFFDDE4DB),
+    surfaceTint = Color(0xFF006D38),
 )
 
-internal val LightTokens = CvkeFridgeColors(
-    bg = Color(0xFFF6F7F9),
-    surface = Color(0xFFFFFFFF),
-    surfaceSunken = Color(0xFFEEF0F3),
-    border = Color(0xFFE1E4E9),
-    borderControl = Color(0xFF858D99),
-    ink = Color(0xFF161A1F),
-    inkMuted = Color(0xFF5B6470),
-    accent = Color(0xFF0E7C86),
-    accentInk = Color(0xFFFFFFFF),
-    accentSubtle = Color(0xFFE0F9FC),
-    accentOnSubtle = Color(0xFF0E7C86),
-    brandApricot = Color(0xFFD9661F),
-    brandApricotSubtle = Color(0xFFFDE9DC),
-    gradientEnd = Color(0xFFC68E67),
-    success = Color(0xFF1A7F4B),
-    warning = Color(0xFF9A5B00),
-    warningSubtle = Color(0xFFFBF0DC),
-    danger = Color(0xFFB42318),
-    dangerInk = Color(0xFFFFFFFF),
-    dangerSubtle = Color(0xFFFDECEA),
-    scrim = Color(0x66161A1F),
+internal val DarkScheme = darkColorScheme(
+    primary = Color(0xFF71EE9B),
+    onPrimary = Color(0xFF00391A),
+    primaryContainer = Color(0xFF53D181),
+    onPrimaryContainer = Color(0xFF00562B),
+    secondary = Color(0xFFA2D2AB),
+    onSecondary = Color(0xFF09381D),
+    secondaryContainer = Color(0xFF265234),
+    onSecondaryContainer = Color(0xFF94C49D),
+    tertiary = Color(0xFFFFCAB5),
+    onTertiary = Color(0xFF571E03),
+    tertiaryContainer = Color(0xFFFFA37D),
+    onTertiaryContainer = Color(0xFF783719),
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
+    background = Color(0xFF0E150F),
+    onBackground = Color(0xFFDDE4DB),
+    surface = Color(0xFF0E150F),
+    onSurface = Color(0xFFDDE4DB),
+    surfaceVariant = Color(0xFF3D4A3F),
+    onSurfaceVariant = Color(0xFFBCCABC),
+    outline = Color(0xFF879487),
+    outlineVariant = Color(0xFF3D4A3F),
+    scrim = Color(0xFF000000),
+    inverseSurface = Color(0xFFDDE4DB),
+    inverseOnSurface = Color(0xFF2B322C),
+    inversePrimary = Color(0xFF006D38),
+    surfaceDim = Color(0xFF0E150F),
+    surfaceBright = Color(0xFF343B34),
+    surfaceContainerLowest = Color(0xFF09100A),
+    surfaceContainerLow = Color(0xFF171D17),
+    surfaceContainer = Color(0xFF1B211B),
+    surfaceContainerHigh = Color(0xFF252C26),
+    surfaceContainerHighest = Color(0xFF303630),
+    surfaceTint = Color(0xFF61DE8C),
 )
-
-internal val DarkTokens = CvkeFridgeColors(
-    bg = Color(0xFF12161B),
-    surface = Color(0xFF1A2027),
-    surfaceSunken = Color(0xFF0D1014),
-    border = Color(0xFF2A323C),
-    borderControl = Color(0xFF6B7684),
-    ink = Color(0xFFE9EDF1),
-    inkMuted = Color(0xFF9FA9B4),
-    accent = Color(0xFF52AEB9),
-    accentInk = Color(0xFF001518),
-    accentSubtle = Color(0xFF0E3135),
-    accentOnSubtle = Color(0xFF52AEB9),
-    brandApricot = Color(0xFFF5A578),
-    brandApricotSubtle = Color(0xFF3A2012),
-    gradientEnd = Color(0xFFD69D76),
-    success = Color(0xFF5FD39A),
-    warning = Color(0xFFF5B14C),
-    warningSubtle = Color(0xFF33270F),
-    danger = Color(0xFFF97066),
-    dangerInk = Color(0xFF2A0A07),
-    dangerSubtle = Color(0xFF3A1614),
-    scrim = Color(0x9905070A),
-)
-
-/** The 4 dp spacing steps. Use only these for gaps and padding. */
-object Space {
-    val s1 = 4.dp
-    val s2 = 8.dp
-    val s3 = 12.dp
-    val s4 = 16.dp
-    val s6 = 24.dp
-    val s8 = 32.dp
-    val s12 = 48.dp
-}
-
-/** Corner radii. Touch: cards and sheets use [lg], buttons and chips are pills, icon tiles and inputs [md]. */
-object Radius {
-    val sm = 4.dp
-    val md = 8.dp
-    val lg = 16.dp
-}
 
 /**
- * Motion: subtle and short. Animate only to show where something came from or went, to soften a jump, or to show work.
- * Tab changes and data values change at once. Nothing takes longer than 400 ms.
+ * The status colours that Material has no role for. They are the "fresh" green and the "expiring" amber of
+ * FridgeFriend (#22C55E and #D97706) as Material custom colours, in harmony with the green of the scheme. "Expired"
+ * is the error role of the scheme.
  */
-object Motion {
-    const val FEEDBACK_MILLIS = 100
-    const val QUICK_MILLIS = 220
-    const val ENTER_MILLIS = 340
-    const val EXIT_MILLIS = 240
+@Immutable
+data class StatusColors(
+    /** Fresh: text and icons on a surface. */
+    val success: Color,
+    /** Expiring: text and icons on a surface. */
+    val warning: Color,
+    /** Expiring: the fill of a card or a tile. */
+    val warningContainer: Color,
+    /** Text and icons on [warningContainer]. */
+    val onWarningContainer: Color,
+)
 
-    /** `easing-standard`, cubic-bezier(0.4, 0, 0.2, 1): gentle at both ends. */
-    val standard: Easing = FastOutSlowInEasing
+internal val LightStatus = StatusColors(
+    success = Color(0xFF006D34),
+    warning = Color(0xFF835500),
+    warningContainer = Color(0xFFFFDDB5),
+    onWarningContainer = Color(0xFF2A1800),
+)
 
-    /** `move-md`: the travel of a screen that pushes in. */
-    val moveMd = 8.dp
-}
+internal val DarkStatus = StatusColors(
+    success = Color(0xFF3EE27B),
+    warning = Color(0xFFFFB955),
+    warningContainer = Color(0xFF633F00),
+    onWarningContainer = Color(0xFFFFDDB5),
+)
 
-/** Fixed sizes. A touch target is 48 dp, which is the Android minimum and more than the design minimum of 44 dp. */
+/** Fixed sizes. */
 object Size {
-    val iconSm = 16.dp
-    val iconMd = 20.dp
-    val iconLg = 24.dp
-    val tile = 32.dp
-    val tileLg = 56.dp
-    val touch = 48.dp
+    /** The maximum width of the content of a screen, so that lines stay short on a wide screen. */
+    val contentMax = 720.dp
 }

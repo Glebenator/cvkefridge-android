@@ -1,10 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- The signature gradient of the design system, from the green of the product to the green blended to apricot, and
+     back. A vector has no sweep with a moved centre and no grain, so this is the diagonal form that the house icon
+     uses. The colours are `accent` and `gradient-end` of the dark appearance in design/product.css of the cvkefridge
+     repository. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:fillColor="#FF0E7C86"
-        android:pathData="M0,0h108v108h-108z" />
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0"
+                android:startY="0"
+                android:endX="108"
+                android:endY="108">
+                <item
+                    android:color="#FF53D181"
+                    android:offset="0" />
+                <item
+                    android:color="#FFDBA75E"
+                    android:offset="0.55" />
+                <item
+                    android:color="#FF53D181"
+                    android:offset="1" />
+            </gradient>
+        </aapt:attr>
+    </path>
 </vector>

@@ -2,8 +2,8 @@
 
 [![Android CI](https://github.com/Glebenator/cvkefridge-android/actions/workflows/android.yml/badge.svg?branch=main)](https://github.com/Glebenator/cvkefridge-android/actions/workflows/android.yml?query=branch%3Amain)
 
-A native Android app for food inventory in the fridge. This is a first scaffold. It has one start screen and no
-features yet. It uses Kotlin, Jetpack Compose, and Material 3.
+A native Android app for food inventory in the fridge. It has the change log on the phone and its first two screens,
+Home and My Fridge. No screen adds or changes food yet. It uses Kotlin, Jetpack Compose, and Material 3.
 
 CVKE Fridge has three repositories:
 
@@ -15,8 +15,16 @@ CVKE Fridge has three repositories:
 
 ## Status
 
-- **Scaffold only.** The app shows a start screen with the name, a short note, and the version. It has no other
-  feature. The application ID is `com.cvke.fridge`. The debug build has the ID `com.cvke.fridge.debug` and the name
+- **Two screens that read the inventory.** Home shows the totals and the first expired and expiring batches. My
+  Fridge shows one card for each food in each storage area, with chips for the storage area and the category, a
+  search field, and a sort control. The two screens have the contents of FridgeFriend (the `basic_ff` repository), with
+  Material 3 components. The colours are a Material 3 colour scheme from its green, and the text starts from its
+  text. The app does not use the wallpaper colours. The brand parts come from the design system of the owner: the
+  signature gradient on the app icon and on the icon of the product, About with the cvke letters, the slice in an
+  empty state, and the motion values. The inventory is the
+  replay of a change log in the private files of the app. No screen writes to it yet, so the release build shows no
+  food. The decision record is ADR 0006 in the cvkefridge repository.
+- **Application ID.** The application ID is `com.cvke.fridge`. The debug build has the ID `com.cvke.fridge.debug` and the name
   CVKE Fridge Debug, so it can be on the same phone as the Play build.
 - **CI.** The badge above shows the result of the newest run on `main`. Select it to see all runs.
 
@@ -77,12 +85,34 @@ Google Play needs an Android App Bundle (AAB) signed with an upload key. Without
   ```sh
   ./gradlew :core:test
   ```
-- **Device tests** (`app/src/androidTest`) run the real app. `StartScreenDeviceTest` checks that the start screen
-  shows the title and the version.
+- **Unit tests of the app** (`app/src/test`). `InventoryContentTest` checks what the two screens show for an inventory
+  and a date: the batches and the totals of Home, and the cards, the filter, and the sort orders of My Fridge.
+
+  ```sh
+  ./gradlew :app:testDebugUnitTest
+  ```
+- **Device tests** (`app/src/androidTest`) run the real app. `InventoryScreensDeviceTest` writes a change log on the
+  device and then starts the activity. It checks the screens with no food, the totals and the batches of Home, and the
+  chips, the search field, and the sort control of My Fridge. Gradle removes the debug app from the device after
+  these tests, with its change log.
 
   ```sh
   ./gradlew :app:connectedDebugAndroidTest
   ```
+
+## Sample of the debug build
+
+No screen adds food yet. To see the screens with food, the debug build can replace its change log with a sample. The
+release build does not have the sample and ignores the request. The screens show that the food is a sample.
+
+```sh
+adb shell am start -S -n com.cvke.fridge.debug/com.cvke.fridge.MainActivity --es inventory sample
+adb shell am start -S -n com.cvke.fridge.debug/com.cvke.fridge.MainActivity --es inventory empty
+```
+
+`-S` stops the app before the start. Without it, Android does not give the request to an app that is open.
+
+Each date of the sample is a number of days from today, so the app calculates the days left as for real food.
 
 ## Project structure
 
@@ -94,8 +124,10 @@ spec.ref                                      The commit of cvkefridge from whic
 scripts/update-spec.py                        Updates or checks the copy in spec/
 app/src/main/java/com/cvke/fridge/
   MainActivity.kt                             The only activity, with edge-to-edge display
-  ui/                                         The start screen
-  ui/theme/                                   Design tokens, the theme, and shared components
+  FridgeApplication.kt                        The objects that live as long as the app
+  data/                                       The change log on the phone
+  ui/                                         Home, My Fridge, the tab bar, and the view model
+  ui/theme/                                   The colour scheme, the theme, and the brand parts of the design system
 ```
 
 Each file in `:core` has a file of the same name in the `CVKEFridgeCore` Swift package of cvkefridge-ios, with the same

@@ -1,32 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The fridge glyph in white. It is scaled 1.5 times and centred, so it is inside the 66 dp safe zone of the 108 dp layer. -->
+<!-- The fridge of the app (Material Design Icons "fridge", Pictogrammers, Apache 2.0) in the ink colour, which has a
+     contrast of 3:1 or more with the two colours of the gradient. It is scaled 2 times and centred, so it is inside
+     the 66 dp safe zone of the 108 dp layer. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
     <group
-        android:scaleX="1.5"
-        android:scaleY="1.5"
-        android:translateX="36"
-        android:translateY="36">
+        android:scaleX="2"
+        android:scaleY="2"
+        android:translateX="30"
+        android:translateY="30">
         <path
-            android:pathData="M5 6a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6Z"
-            android:strokeColor="#FFFFFFFF"
-            android:strokeWidth="1.5"
-            android:strokeLineCap="round"
-            android:strokeLineJoin="round" />
-        <path
-            android:pathData="M5 10h14"
-            android:strokeColor="#FFFFFFFF"
-            android:strokeWidth="1.5"
-            android:strokeLineCap="round"
-            android:strokeLineJoin="round" />
-        <path
-            android:pathData="M15 7v6"
-            android:strokeColor="#FFFFFFFF"
-            android:strokeWidth="1.5"
-            android:strokeLineCap="round"
-            android:strokeLineJoin="round" />
+            android:fillColor="#FF161A1F"
+            android:pathData="M7,2H17A2,2 0 0,1 19,4V9H5V4A2,2 0 0,1 7,2M19,19A2,2 0 0,1 17,21V22H15V21H9V22H7V21A2,2 0 0,1 5,19V10H19V19M8,5V7H10V5H8M8,12V15H10V12H8Z" />
     </group>
 </vector>
