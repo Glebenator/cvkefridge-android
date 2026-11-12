@@ -1,6 +1,8 @@
 package com.cvke.fridge
 
 import android.app.Application
+import androidx.datastore.core.DataStoreFactory
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import com.cvke.fridge.core.FoodTable
 import com.cvke.fridge.data.ChangeLogStore
 import com.cvke.fridge.data.PhoneId
@@ -9,9 +11,15 @@ import com.cvke.fridge.lookup.HttpTransport
 import com.cvke.fridge.lookup.OpenFoodFactsClient
 import com.cvke.fridge.lookup.ProductLookup
 import com.cvke.fridge.lookup.ProductLookupCache
+import com.cvke.fridge.reminder.ReminderAlarm
+import com.cvke.fridge.reminder.ReminderNotifier
+import com.cvke.fridge.reminder.ReminderSettingsSerializer
+import com.cvke.fridge.reminder.Reminders
 import java.io.File
 import java.util.Locale
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.withContext
 
 /** Holds the objects that live as long as the app. The device tests use a subclass with a different [httpTransport]. */
@@ -31,6 +39,24 @@ open class FridgeApplication : Application() {
             client = OpenFoodFactsClient(httpTransport(), "CVKEFridge-Android/${BuildConfig.VERSION_NAME}"),
             cache = ProductLookupCache(File(filesDir, "product-lookups.json")),
             language = { Locale.getDefault().language },
+        )
+    }
+
+    /**
+     * The daily reminder. Its settings are in a typed DataStore file in the private files of the app. Backup is off, so
+     * they stay on the phone.
+     */
+    val reminders: Reminders by lazy {
+        Reminders(
+            store = DataStoreFactory.create(
+                serializer = ReminderSettingsSerializer,
+                corruptionHandler = ReplaceFileCorruptionHandler { ReminderSettingsSerializer.defaultValue },
+                scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+                produceFile = { File(filesDir, "reminders.json") },
+            ),
+            changeLog = changeLog,
+            notifier = ReminderNotifier(this),
+            alarm = ReminderAlarm(this),
         )
     }
 

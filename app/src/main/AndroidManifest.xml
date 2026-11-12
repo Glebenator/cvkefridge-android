@@ -9,6 +9,10 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <!-- Only for the product lookup with Open Food Facts. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- The daily reminder. The app explains the permission before Android asks. The alarm is inexact, so the app does
+         not need the permission for exact alarms. After a restart of the phone, the app sets the alarm again. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name=".FridgeApplication"
@@ -30,6 +34,23 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+            The alarm of the daily reminder, and the broadcasts after which the alarm must be set again. The receiver
+            is off until the person turns reminders on (ReminderAlarm). It is not exported: only the app and Android
+            can send to it.
+        -->
+        <receiver
+            android:name=".reminder.ReminderReceiver"
+            android:enabled="false"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
 
         <!--
             ML Kit sends data about its use to Google through the transport "cct". The app has no analytics, and the
