@@ -41,7 +41,7 @@ sealed interface FridgeUiState {
      *
      * @property content What Home and My Fridge show.
      * @property inventory The replay of the change log. The other screens and the forms read it.
-     * @property foods The table of foods.
+     * @property foods The table of foods. It is empty for a short time after the start, while the app reads it.
      * @property lastAreaId The storage area of the last batch that this phone added, or null.
      */
     data class Ready(
@@ -111,6 +111,9 @@ class FridgeViewModel(
 
     private val mutex = Mutex()
     private var loaded: Loaded? = null
+
+    /** The table of foods, after the first read. */
+    private var foods: FoodTable? = null
     private var noticeCount = 0L
 
     init {
@@ -123,11 +126,17 @@ class FridgeViewModel(
         viewModelScope.launch {
             mutex.withLock {
                 _state.value = try {
-                    val foods = loaded?.foods ?: readFoods()
                     val origin = phoneId.get()
                     val changes = changeLog.read()
                     val inventory = withContext(work) { Inventory.replay(changes) }
-                    ready(Loaded(changes, inventory, foods, origin).also { loaded = it })
+                    val known = foods
+                    if (known == null) {
+                        // The inventory does not wait for the table of foods. The screens show it first, with an empty
+                        // table, and get the table when it is read.
+                        _state.value = ready(Loaded(changes, inventory, FoodTable(emptyList()), origin).also { loaded = it })
+                    }
+                    val table = known ?: readFoods().also { foods = it }
+                    ready(Loaded(changes, inventory, table, origin).also { loaded = it })
                 } catch (_: IOException) {
                     FridgeUiState.LoadFailed
                 } catch (_: IllegalArgumentException) {

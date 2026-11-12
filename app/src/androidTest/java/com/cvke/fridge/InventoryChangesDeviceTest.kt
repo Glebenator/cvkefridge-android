@@ -28,7 +28,6 @@ class InventoryChangesDeviceTest : DeviceTest() {
     @Test
     fun aFoodThatIsAddedByHandIsOnMyFridgeAndOnHome() {
         start(emptyList())
-        waitFor(hasTestTag("add_food"))
         rule.onNodeWithTag("add_food").performClick()
         waitFor(hasTestTag("add_food_screen"))
 
