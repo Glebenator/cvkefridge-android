@@ -13,6 +13,12 @@ data class ProductPhoto(val path: String)
  */
 data class RemovedPhoto(val productId: String, val path: String)
 
+/**
+ * A photo of the add form for a product that does not exist yet (see [PhotoStore.prepare]). The form keeps its path,
+ * also when Android stops the app in the background.
+ */
+data class PreparedPhoto(val path: String)
+
 /** A file in the folder of the photos, with the time of its last change in milliseconds. */
 data class PhotoFile(val name: String, val modified: Long)
 

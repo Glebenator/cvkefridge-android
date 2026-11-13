@@ -5,6 +5,7 @@ import com.cvke.fridge.core.CalendarDate
 import com.cvke.fridge.core.Category
 import com.cvke.fridge.core.ChangeBody
 import com.cvke.fridge.core.ExpiryDate
+import com.cvke.fridge.core.ExpirySource
 import com.cvke.fridge.core.Inventory
 import com.cvke.fridge.core.MeasureUnit
 import com.cvke.fridge.core.Outcome
@@ -67,6 +68,12 @@ sealed interface InventoryAction {
 
     data class DeleteStorageArea(val id: String) : InventoryAction
 
+    /**
+     * Gives a batch a later expiry date, because the food is still good. The date is a chosen date: not from the
+     * package and not an estimate. See [LaterExpiry].
+     */
+    data class MoveExpiry(val batchId: String, val date: CalendarDate) : InventoryAction
+
     /** Undoes the changes of an earlier action. */
     data class Undo(val changeIds: List<String>) : InventoryAction
 }
@@ -82,6 +89,9 @@ sealed interface NoticeMessage {
 
     /** [count] is the number of batches. */
     data class BatchDeleted(val name: String, val count: Int) : NoticeMessage
+
+    /** A batch of the food got a new expiry date. */
+    data class ExpiryMoved(val name: String, val date: CalendarDate) : NoticeMessage
 
     data class StorageAreaDeleted(val name: String) : NoticeMessage
 
@@ -142,6 +152,7 @@ object InventoryActions {
             listOf(ChangeBody.BatchEdited(action.batchId, action.quantity, action.storageAreaId, action.dateAdded, action.expiry)),
         )
         is InventoryAction.Take -> take(action, inventory, today)
+        is InventoryAction.MoveExpiry -> moveExpiry(action, inventory)
         is InventoryAction.DeleteBatches -> deleteBatches(action, inventory)
         is InventoryAction.DeleteProduct -> {
             val name = inventory.products.firstOrNull { it.id == action.productId }?.name.orEmpty()
@@ -204,6 +215,18 @@ object InventoryActions {
         }
         val taken = plan.takes.sumOf { it.quantity }
         return Planned.Changes(bodies, NoticeMessage.Taken(product.name, taken, product.unit, action.outcome), undoable = true)
+    }
+
+    private fun moveExpiry(action: InventoryAction.MoveExpiry, inventory: Inventory): Planned {
+        val batch = inventory.batches.firstOrNull { it.id == action.batchId } ?: return Planned.Refused(RejectionReason.UNKNOWN_BATCH)
+        val name = inventory.products.firstOrNull { it.id == batch.productId }?.name.orEmpty()
+        // The date is not from the package and not from the table of foods (rule 5 of the shared specification).
+        val expiry = ExpiryDate(action.date, ExpirySource.CHOSEN)
+        return Planned.Changes(
+            listOf(ChangeBody.BatchEdited(batch.id, batch.quantity, batch.storageAreaId, batch.dateAdded, expiry)),
+            NoticeMessage.ExpiryMoved(name, action.date),
+            undoable = true,
+        )
     }
 
     private fun deleteBatches(action: InventoryAction.DeleteBatches, inventory: Inventory): Planned {

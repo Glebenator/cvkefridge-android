@@ -1,7 +1,6 @@
 package com.cvke.fridge.ui
 
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +21,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -54,6 +55,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -62,11 +64,13 @@ import androidx.compose.ui.unit.min
 import com.cvke.fridge.R
 import com.cvke.fridge.core.CalendarDate
 import com.cvke.fridge.core.ExpirySource
+import com.cvke.fridge.core.Freshness
 import com.cvke.fridge.core.Outcome
 import com.cvke.fridge.history.DayName
 import com.cvke.fridge.history.HistoryContent
 import com.cvke.fridge.history.HistoryLine
 import com.cvke.fridge.inventory.InventoryAction
+import com.cvke.fridge.inventory.LaterExpiry
 import com.cvke.fridge.inventory.TakeRequest
 import com.cvke.fridge.photo.ProductPhoto
 import com.cvke.fridge.ui.theme.BrandSpinner
@@ -90,15 +94,18 @@ import com.cvke.fridge.ui.theme.Size
  * Below the batches, the history of the food shows what was used and what was thrown away, the newest first, with the
  * totals. It shows the first entries, and "Show all" shows the others.
  *
- * The product can have a photo. "Add a photo" opens the photo picker of Android, which needs no permission. The photo
- * is at the top of the screen, with "Change photo" and "Remove photo". The person can undo a remove. The photo is
- * decorative, because the name of the food is below it.
+ * The product can have a photo. "Take a photo" opens the camera app, and "Choose a photo" opens the photo picker of
+ * Android (see [rememberPhotoSources]). The photo is at the top of the screen, with "Change photo" and "Remove photo".
+ * "Change photo" has the same two sources. The person can undo a remove. The photo is decorative, because the name of
+ * the food is below it.
  *
  * When the product is not in the inventory, for example after a delete, the screen closes.
  *
  * @param photo The photo of the product, or null.
  * @param addingPhoto True while the app makes the photo from the picture that the person selected.
- * @param pickPhoto Opens the source of a picture.
+ * @param pickPhoto Opens the photo picker.
+ * @param takePhoto Opens the camera app.
+ * @param newCapture Makes the address of a new file for a picture of the camera app.
  */
 @Composable
 fun FoodDetailScreen(
@@ -107,6 +114,8 @@ fun FoodDetailScreen(
     photo: ProductPhoto?,
     addingPhoto: Boolean,
     pickPhoto: ActivityResultContract<Unit, Uri?>,
+    takePhoto: ActivityResultContract<Uri, Boolean>,
+    newCapture: suspend () -> Uri,
     onPhotoPicked: (Uri) -> Unit,
     onRemovePhoto: () -> Unit,
     snackbar: SnackbarHostState,
@@ -130,9 +139,8 @@ fun FoodDetailScreen(
     val today = ready?.today
     var allHistory by rememberSaveable { mutableStateOf(false) }
 
-    // The picker gives its result also after Android stopped the app while the picker was open.
-    val picker = rememberLauncherForActivityResult(pickPhoto) { uri -> if (uri != null) onPhotoPicked(uri) }
-    val choosePhoto = { picker.launch(Unit) }
+    // The picker and the camera app give their result also after Android stopped the app while they were open.
+    val sources = rememberPhotoSources(pickPhoto, takePhoto, newCapture, onPhotoPicked)
 
     var taking by rememberSaveable(stateSaver = TakeRequestSaver) { mutableStateOf(null) }
     taking?.let { request -> if (ready != null) TakeDialog(request, ready.inventory, onPerform, onDismiss = { taking = null }) }
@@ -163,12 +171,12 @@ fun FoodDetailScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 val hasPhoto = photo != null || addingPhoto
-                if (hasPhoto) item(key = "photo") { FoodPhoto(photo, addingPhoto, onChange = choosePhoto, onRemove = onRemovePhoto) }
+                if (hasPhoto) item(key = "photo") { FoodPhoto(photo, addingPhoto, sources, onRemove = onRemovePhoto) }
                 item(key = "product") {
                     ProductHeader(
                         detail,
                         showIcon = !hasPhoto,
-                        onAddPhoto = if (hasPhoto) null else choosePhoto,
+                        sources = if (hasPhoto) null else sources,
                         Modifier.padding(bottom = 8.dp),
                     )
                 }
@@ -207,6 +215,8 @@ fun FoodDetailScreen(
                             onEdit = { onEditBatch(batch.id) },
                             onTake = { taking = TakeRequest(screen.productId, listOf(batch.id), it) },
                             onDelete = { onPerform(InventoryAction.DeleteBatches(screen.productId, listOf(batch.id))) },
+                            today = today,
+                            onMoveExpiry = { onPerform(InventoryAction.MoveExpiry(batch.id, it)) },
                         )
                     }
                     item(key = "add") {
@@ -236,10 +246,11 @@ fun FoodDetailScreen(
 
 /**
  * The product: the icon of its category, its name in full, and its category with the sum of its batches. A product
- * with a photo shows the photo above, in the place of the icon. A product with no photo has "Add a photo" below.
+ * with a photo shows the photo above, in the place of the icon. A product with no photo has "Take a photo" and "Choose a
+ * photo" below.
  */
 @Composable
-private fun ProductHeader(detail: FoodDetail, showIcon: Boolean, onAddPhoto: (() -> Unit)?, modifier: Modifier = Modifier) {
+private fun ProductHeader(detail: FoodDetail, showIcon: Boolean, sources: PhotoSources?, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     val product = detail.product
     Column(modifier) {
@@ -251,13 +262,7 @@ private fun ProductHeader(detail: FoodDetail, showIcon: Boolean, onAddPhoto: (()
             if (showIcon) IconTile(product.category.icon(), scheme.secondaryContainer, scheme.onSecondaryContainer, size = 56.dp)
             ProductNames(detail)
         }
-        if (onAddPhoto != null) {
-            TextButton(onAddPhoto, Modifier.padding(top = 8.dp).testTag("photo_add"), contentPadding = ButtonDefaults.TextButtonWithIconContentPadding) {
-                Icon(painterResource(R.drawable.ic_image_plus), contentDescription = null, Modifier.size(ButtonDefaults.IconSize))
-                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                Text(stringResource(R.string.photo_add))
-            }
-        }
+        if (sources != null) PhotoButtons(sources, Modifier.padding(top = 8.dp))
     }
 }
 
@@ -266,7 +271,7 @@ private fun ProductHeader(detail: FoodDetail, showIcon: Boolean, onAddPhoto: (()
  * "Change photo" and "Remove photo". While the app makes a new photo, the screen says so, and screen readers hear it.
  */
 @Composable
-private fun FoodPhoto(photo: ProductPhoto?, adding: Boolean, onChange: () -> Unit, onRemove: () -> Unit, modifier: Modifier = Modifier) {
+private fun FoodPhoto(photo: ProductPhoto?, adding: Boolean, sources: PhotoSources, onRemove: () -> Unit, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     Column(modifier.fillMaxWidth()) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -298,16 +303,8 @@ private fun FoodPhoto(photo: ProductPhoto?, adding: Boolean, onChange: () -> Uni
         }
         if (!adding) {
             FlowRow(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onChange, Modifier.testTag("photo_change"), contentPadding = ButtonDefaults.TextButtonWithIconContentPadding) {
-                    Icon(painterResource(R.drawable.ic_image_edit), contentDescription = null, Modifier.size(ButtonDefaults.IconSize))
-                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                    Text(stringResource(R.string.photo_change))
-                }
-                TextButton(onRemove, Modifier.testTag("photo_remove"), contentPadding = ButtonDefaults.TextButtonWithIconContentPadding) {
-                    Icon(painterResource(R.drawable.ic_image_remove), contentDescription = null, Modifier.size(ButtonDefaults.IconSize))
-                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                    Text(stringResource(R.string.photo_remove))
-                }
+                ChangePhotoButton(sources)
+                PhotoButton(R.drawable.ic_image_remove, R.string.photo_remove, "photo_remove", onRemove)
             }
         }
     }
@@ -450,6 +447,13 @@ private fun FoodMenu(onDelete: () -> Unit) {
 /**
  * One batch: its quantity, its days left, its expiry date with the source, its storage area, and its date added.
  * The menu at the end of the card has the actions for this batch.
+ *
+ * A batch that is expiring or expired also has "Still good?" with "+1 day", "+1 week", and "Other date". A date on a
+ * package or an estimate is not always right, and food can be good after it. The new date comes from [LaterExpiry],
+ * and the message has "Undo".
+ *
+ * @param today The date of today, or null before the inventory is read.
+ * @param onMoveExpiry Gives the batch the new expiry date.
  */
 @Composable
 private fun BatchCard(
@@ -459,6 +463,8 @@ private fun BatchCard(
     onEdit: () -> Unit,
     onTake: (Outcome) -> Unit,
     onDelete: () -> Unit,
+    today: CalendarDate?,
+    onMoveExpiry: (CalendarDate) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -468,6 +474,8 @@ private fun BatchCard(
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainerLow),
     ) {
+        val expiry = batch.expiry
+        val late = batch.freshness == Freshness.EXPIRING || batch.freshness == Freshness.EXPIRED
         Row(Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp), verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f).semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 if (useFirst) {
@@ -479,11 +487,14 @@ private fun BatchCard(
                     color = freshnessColor(batch.freshness),
                     style = MaterialTheme.typography.bodyLarge,
                 )
-                val expiry = batch.expiry
                 if (expiry != null) {
                     Text(
                         stringResource(
-                            if (expiry.source == ExpirySource.PRINTED) R.string.batch_printed_date else R.string.batch_estimated_date,
+                            when (expiry.source) {
+                                ExpirySource.PRINTED -> R.string.batch_printed_date
+                                ExpirySource.ESTIMATED -> R.string.batch_estimated_date
+                                ExpirySource.CHOSEN -> R.string.batch_chosen_date
+                            },
                             dateText(expiry.date),
                         ),
                         color = scheme.onSurfaceVariant,
@@ -536,6 +547,53 @@ private fun BatchCard(
                     )
                 }
             }
+        }
+        if (late && expiry != null && today != null) {
+            LaterExpiryRow(expiry.date, today, onMoveExpiry, Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp))
+        }
+    }
+}
+
+/**
+ * "Still good?" with the quick choices for a later expiry date, and "Other date", which opens the date picker. The
+ * picker starts at the expiry date or at today, whichever is later.
+ */
+@Composable
+private fun LaterExpiryRow(expiry: CalendarDate, today: CalendarDate, onMove: (CalendarDate) -> Unit, modifier: Modifier = Modifier) {
+    var picking by rememberSaveable { mutableStateOf(false) }
+    if (picking) {
+        DateDialog(
+            initial = maxOf(expiry, today),
+            onConfirm = {
+                picking = false
+                onMove(it)
+            },
+            onDismiss = { picking = false },
+        )
+    }
+    Column(modifier) {
+        Text(
+            stringResource(R.string.later_expiry_title),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelLarge,
+        )
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            LaterExpiry.quickDays.forEach { days ->
+                val week = days == 7
+                val description = stringResource(if (week) R.string.later_expiry_week_description else R.string.later_expiry_day_description)
+                AssistChip(
+                    onClick = { onMove(LaterExpiry.date(expiry, today, days)) },
+                    label = { Text(stringResource(if (week) R.string.later_expiry_week else R.string.later_expiry_day)) },
+                    modifier = Modifier.semantics { contentDescription = description }.testTag("later_expiry_$days"),
+                )
+            }
+            val other = stringResource(R.string.later_expiry_other_description)
+            AssistChip(
+                onClick = { picking = true },
+                label = { Text(stringResource(R.string.later_expiry_other)) },
+                leadingIcon = { Icon(painterResource(R.drawable.ic_calendar), contentDescription = null, Modifier.size(AssistChipDefaults.IconSize)) },
+                modifier = Modifier.semantics { contentDescription = other }.testTag("later_expiry_other"),
+            )
         }
     }
 }

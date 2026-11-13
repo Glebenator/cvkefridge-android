@@ -19,14 +19,18 @@ CVKE Fridge has three repositories:
 - **Home and My Fridge.** Home shows the totals and the first expired and expiring batches. My Fridge shows one card
   for each food in each storage area, with tabs for the storage areas, a search field, one row of chips for the
   category and the freshness, and a sort control. A tap on the number of expiring or expired batches on Home opens My
-  Fridge with that freshness. The two screens have the contents of FridgeFriend (the `basic_ff` repository), with
-  Material 3 components. On Android 12 and later, the colours come from the wallpaper of the phone. On
-  Android 10 and 11, they are a Material 3 colour scheme from the green of FridgeFriend. Fresh is green and expiring is
-  amber with each wallpaper. The brand parts come from the design system of the owner. The decision records are
-  ADR 0006 and ADR 0007 in the cvkefridge repository.
-- **Two ways to add food, each one tap.** The floating action button of the two tabs opens the scanner. The small
-  floating action button above it opens the form for food with no barcode. A long press on a button shows its name.
-  The empty state has the same two buttons. A menu was not used, because it adds a tap to each way.
+  Fridge with that freshness. A tap on My Fridge in the navigation bar opens the Fridge with no filter and no search
+  text; the sort order stays. The two screens have the contents of FridgeFriend (the `basic_ff` repository), with
+  Material 3 components. On Android 12 and later, the colours come from the wallpaper of the phone, unless the person
+  turns "Wallpaper colours" off in Settings. On Android 10 and 11, and with the setting off, they are a Material 3
+  colour scheme from the green of FridgeFriend. Fresh is green and expiring is amber with each wallpaper. The brand
+  parts come from the design system of the owner. The decision records are ADR 0006, ADR 0007, and ADR 0008 in the
+  cvkefridge repository.
+- **The navigation bar.** Home, My Fridge, the add button, History, and Settings (ADR 0008). The Material navigation
+  bar is for three to five destinations, so it is full.
+- **One add button in the middle of the tab bar.** The add button is larger than a tab and goes 20 dp above the
+  navigation bar. It opens the add form from each tab. The form starts with a large "Scan a barcode" card that opens
+  the scanner. Two floating buttons on one screen were too much. A long press on the button shows its name.
 - **Add food by hand.** One short form: the name, the category, the quantity and the unit, the storage area, and the
   expiry date. The name field suggests the foods of the table of foods and the products in the inventory. A name of a
   product in the inventory adds a batch to it. The expiry date starts as the estimated date for the food and the
@@ -40,12 +44,22 @@ CVKE Fridge has three repositories:
   edit the product (name, category, unit) and each batch (quantity, storage area, date added, expiry date), and add
   a batch. Below the batches is the history of the food. The product can have a photo. See [History, add again, and
   the product photo](#history-add-again-and-the-product-photo).
+- **Still good?** A batch that is expiring or expired has "+1 day", "+1 week", and "Other date" on the screen of
+  the food. A date on a package or an estimate is not always right. An expired batch starts from today, so "+1 day"
+  means good until tomorrow (`inventory/LaterExpiry`). The message has "Undo". The new date is a chosen date (ADR 0009
+  in the cvkefridge repository), and the screen shows it as "Your date". The edit form keeps it while the person does
+  not select another date.
 - **History.** The third tab shows what was used and what was thrown away, with a summary. See
   [History, add again, and the product photo](#history-add-again-and-the-product-photo).
 - **Used and thrown away, with undo.** A swipe on a card records the oldest batch as used (to the end) or as thrown
   away (to the start). The menu of a card and the screen of a food record a quantity that the person types. The
-  quantity comes from the oldest batch first. Each of these actions, each delete, and each add shows a snackbar with
+  quantity comes from the oldest batch first. Each of these actions, each delete, and each add shows a message with
   "Undo". A delete is for a mistake, and it is only in a menu.
+- **Messages.** The result of an action shows as a small card that floats above the content (`ui/NoticeHost.kt`): an
+  icon for the kind of the message (done, deleted, information, problem), the text, and "Undo" or "Try again". It
+  comes up from below. A swipe to the side removes it. Its time stops while a finger is on it: 4 seconds, or 8 seconds
+  with a button, and longer when the accessibility settings of the device ask for more time. A done or a problem
+  message gives a short vibration.
 - **Storage areas.** The menu of My Fridge opens the screen that creates, edits, and deletes storage areas with their
   storage kind. Fridge and Freezer are fixed. A storage area with food cannot be deleted, and the screen says why.
 - **The change log.** The inventory is the replay of a change log in the private files of the app. Each action of the
@@ -127,9 +141,7 @@ The reports are in the artifacts `android-reports` and `android-device-reports` 
 - **Where History is.** History is the third tab of the navigation bar, after Home and My Fridge. It is a destination
   at the top level: it shows all food that ended, not a part of one food or of one screen. The Material navigation bar
   is for three to five destinations of the same importance, and a destination in a menu or in Settings is hard to
-  find. The settings button of Home stays for the settings. Home and My Fridge do not change. The two floating buttons
-  that add food are not on History, because a floating action button is for the main action of a screen, and the main
-  action of History is in each entry. They grow and shrink when the person goes to History and back.
+  find. Home and My Fridge do not change. The add button is in the middle of the bar on each tab, also on History.
 - **The list.** One entry for each use and each throw away, the newest first, with a header for each day: "Today",
   "Yesterday", or the date. An entry has the photo or the category icon, the name, the quantity with its unit, and the
   outcome in words with its icon: the outcome is never only a colour. Screen readers hear an entry as one item, for
@@ -163,12 +175,23 @@ The reports are in the artifacts `android-reports` and `android-device-reports` 
   none of now, the last one first, below the word "Recent". In the other suggestions, such a food says "You had this
   before". A selected recent food gets its storage area and its usual quantity. A form after a scan does not show
   recent foods.
-- **The product photo.** "Add a photo" on the screen of a food opens the photo picker of Android
-  (`ActivityResultContracts.PickVisualMedia`, pictures only). The picker gives the app only the picture that the
-  person selects, so the app needs no storage permission. On a phone with no photo picker, Android opens its document
-  picker, which also needs no permission. The app does not take a picture with the camera app: the manifest declares
-  the camera permission for the scanner, and Android then refuses `ACTION_IMAGE_CAPTURE` until the person allows the
-  camera. The picker asks for nothing.
+- **The product photo.** The screen of a food has "Take a photo" and "Choose a photo", and "Change photo" has the
+  same two (ADR 0008). "Choose a photo" opens the photo picker of Android (`ActivityResultContracts.PickVisualMedia`,
+  pictures only). The picker gives the app only the picture that the person selects, so the app needs no storage
+  permission. On a phone with no photo picker, Android opens its document picker, which also needs no permission.
+- **Take a photo.** "Take a photo" opens the camera app of the phone (`ActivityResultContracts.TakePicture`). The
+  manifest declares the camera permission for the scanner, so Android refuses `ACTION_IMAGE_CAPTURE` until the person
+  allows the camera. Before Android asks, a dialog explains why. When Android does not ask again, a dialog says so and
+  opens the settings of the app. "Choose a photo" is always there. With no camera or no camera app, only "Choose a
+  photo" is there. The camera app writes the picture into a new file in `cache/camera` through the FileProvider of
+  the app (`res/xml/file_paths.xml`), which gives it only that one file. The app makes the photo from the file, and
+  then deletes the file. A file of a capture that did not come back goes at the next start, when it is older than one
+  day. The manifest names `IMAGE_CAPTURE` in `<queries>`, so that Android 11 and later show the app the camera app.
+- **A photo in the add form.** The add form has a photo field at its end, for a new food and for a food in the
+  inventory with no photo. The app makes the photo at once into `cache/prepared-photos`, and the form keeps its path,
+  also when Android stops the app in the background. When the form saves, the product gets the photo. "Remove" and a
+  new photo delete the earlier prepared file. The prepared file of a form that closed with no save goes at the next
+  start, when it is older than one day.
 - **The photo file.** The app reads the picture one time, off the main thread, and keeps no reference to it.
   `ImageDecoder` turns the picture as its EXIF orientation says and decodes it with its longest edge at 1024 pixels,
   so a very large picture needs little memory. The app writes it as a JPEG (quality 85) with no metadata, so the
@@ -215,8 +238,10 @@ The reports are in the artifacts `android-reports` and `android-device-reports` 
   notification has no actions: a reminder names more than one food, and "used" or "thrown away" needs a quantity and
   an undo, which the app has and a notification does not. On a locked screen, the notification shows only the number
   of foods.
-- **Where the settings are.** The settings button at the top of Home, at the place of the settings button of
-  FridgeFriend, opens Settings. The reminders are the only settings now. The screen has the switch, the time (the
+- **Where the settings are.** Settings is a tab of the navigation bar (ADR 0008). It has the reminders and, on
+  Android 12 and later, "Wallpaper colours" (on at the start). The setting is in `appearance.json`, a typed DataStore
+  in the private files of the app. The activity waits for this small file before it draws, so the colours do not
+  change after the start. The reminder part of the screen has the switch, the time (the
   Material time picker, with the 12-hour or the 24-hour clock of the phone, and a keyboard input), the lead time, the
   date and the time of the next reminder, and the words "The time is approximate". The debug build also has "Send a
   test reminder". The release build does not have this button.
@@ -318,12 +343,16 @@ Google Play needs an Android App Bundle (AAB) signed with an upload key. Without
   hand, records food as used with a swipe and undoes it, throws away a quantity, edits a batch, and creates a storage
   area. It reads the screen and the replay of the change log on the device. `BarcodeDeviceTest` goes from a typed
   barcode to a saved food through the scanner, the lookup, and the form, and checks "not found" and "no connection".
+  `InventoryScreensDeviceTest` also checks that a tap on My Fridge in the navigation bar shows the Fridge with no filter.
   The test runner (`DeviceTestRunner`) gives the app a fake server in the place of the internet, so the device tests
   never call Open Food Facts. `HistoryDeviceTest` records food as used and as thrown away and finds it in History
   with its outcome, uses the filter, adds a food again from a history entry and reads the new batch in the change log,
   and gives a product a photo, finds it again after a restart, removes it with undo, and waits until its file is gone.
-  The test runner gives the app a source of a picture with no screen (`TestPhotoPicker`), so the device tests do not
-  drive the photo picker of Android. `BarcodeReaderDeviceTest` draws barcodes in a picture and reads them with the ML
+  It also takes a photo with the camera after the explanation of the permission, checks that the picture of the camera
+  is gone, and saves a new food with a photo from the add form. The test runner gives the app a photo picker and a
+  camera app with no screen (`TestPhotoPicker`, `TestPhotoCamera`), so the device tests do not drive other apps. The
+  camera test gives the app the camera permission with the shell. `SettingsDeviceTest` turns the wallpaper colours off
+  in the Settings tab and finds them off after a restart. `BarcodeReaderDeviceTest` draws barcodes in a picture and reads them with the ML
   Kit model of the app. `ReminderDeviceTest` goes from the offer on Home through the explanation to the question of
   Android, closes it with no answer, and turns reminders on through the settings of Android. While it waits for a
   window of Android, it closes a dialog of the system about another app, for example "Play Store keeps stopping". It

@@ -68,6 +68,12 @@ class InventoryScreensDeviceTest : DeviceTest() {
         rule.onNodeWithText("Baby spinach").assertIsDisplayed()
         rule.onAllNodesWithTag("food_sample-chicken/fridge").assertCountEquals(0)
 
+        // A tap on My Fridge in the navigation bar starts My Fridge again: the Fridge, with no filter.
+        rule.onNodeWithTag("tab_my_fridge").performClick()
+        rule.onNodeWithTag("area_fridge").assertIsSelected()
+        rule.onNodeWithTag("filter_expiring").assertIsNotSelected()
+        rule.onNodeWithText("Chicken thighs").assertIsDisplayed()
+
         // "View all" opens My Fridge with no filter. On a small screen, the button is clear of the two buttons that add
         // food when the row of cards below it is in view.
         rule.onNodeWithTag("tab_home").performClick()
@@ -82,6 +88,9 @@ class InventoryScreensDeviceTest : DeviceTest() {
     fun myFridgeFiltersSearchesAndSorts() {
         start(SampleInventory.changes(today()))
         rule.onNodeWithTag("tab_my_fridge").performClick()
+        // My Fridge opens on the Fridge. The test starts with all storage areas.
+        rule.onNodeWithTag("area_fridge").assertIsSelected()
+        rule.onNodeWithTag("area_all").performClick()
         val list = rule.onNodeWithTag("my_fridge_screen")
 
         // The list starts with the food that expires first. One card has both batches of the milk in the Fridge.

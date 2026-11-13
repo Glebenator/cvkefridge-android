@@ -149,7 +149,7 @@ class ReminderDeviceTest : DeviceTest() {
 
         // The switch in the settings is still there. Android does not ask again, so the app sends the person to the
         // settings of Android. The test allows the notifications there with the shell, and comes back.
-        rule.onNodeWithTag("settings_button").performScrollTo().performClick()
+        rule.onNodeWithTag("tab_settings").performClick()
         waitFor(hasTestTag("settings_screen"))
         rule.onNodeWithTag("reminders_switch").assertIsOff().performClick()
         rule.onNodeWithTag("notifications_off").assertIsDisplayed()
@@ -223,10 +223,9 @@ class ReminderDeviceTest : DeviceTest() {
         rule.onNodeWithTag("filter_expiring").assertIsSelected()
         rule.onNodeWithTag("filter_expired").assertIsSelected()
 
-        // The app is open on the settings screen. A tap on the reminder closes it and shows My Fridge again.
+        // The app is open on the Settings tab. A tap on the reminder shows My Fridge again.
         rule.onNodeWithTag("filter_expired").performClick().assertIsNotSelected()
-        rule.onNodeWithTag("tab_home").performClick()
-        rule.onNodeWithTag("settings_button").performScrollTo().performClick()
+        rule.onNodeWithTag("tab_settings").performClick()
         waitFor(hasTestTag("settings_screen"))
         runBlocking { app.reminders.sendTest() }
         rule.waitUntil(TIMEOUT_MILLIS) { reminder() != null }
@@ -241,7 +240,7 @@ class ReminderDeviceTest : DeviceTest() {
     fun settingsChangeAndStayAfterARestartOfTheApp() {
         allowNotifications()
         start(SampleInventory.changes(today()))
-        rule.onNodeWithTag("settings_button").performScrollTo().performClick()
+        rule.onNodeWithTag("tab_settings").performClick()
         waitFor(hasTestTag("settings_screen"))
         rule.onNodeWithTag("reminders_switch").assertIsOff().performClick()
         waitFor(hasTestTag("reminders_switch") and isOn())
@@ -266,7 +265,7 @@ class ReminderDeviceTest : DeviceTest() {
         scenario?.close()
         scenario = ActivityScenario.launch(MainActivity::class.java)
         waitFor(hasTestTag("add_food"))
-        rule.onNodeWithTag("settings_button").performScrollTo().performClick()
+        rule.onNodeWithTag("tab_settings").performClick()
         waitFor(hasTestTag("settings_screen"))
         rule.onNodeWithTag("reminders_switch").assertIsOn()
         rule.onNode(hasTestTag("reminders_lead") and hasText("1 day before the expiry date")).assertIsDisplayed()

@@ -1,9 +1,14 @@
 package com.cvke.fridge.ui
 
+import android.os.Build
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,13 +32,13 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDialog
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -62,6 +68,7 @@ import com.cvke.fridge.reminder.NotificationAccess
 import com.cvke.fridge.reminder.ReminderRules
 import com.cvke.fridge.reminder.ReminderSchedule
 import com.cvke.fridge.reminder.ReminderSettings
+import com.cvke.fridge.settings.AppearanceSettings
 import com.cvke.fridge.ui.theme.Size
 import java.time.Instant
 import java.time.ZoneId
@@ -69,46 +76,64 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
 /**
- * The settings. The settings button on Home opens them, at the place of the settings button of FridgeFriend. The
- * reminders are the only settings now.
+ * The settings, a tab of the navigation bar (ADR 0008 in the cvkefridge repository): the reminders, and on Android 12
+ * and later the wallpaper colours.
  *
  * The switch turns reminders on with the explanation of the notification permission before Android asks (see
  * [NotificationAccessHost]). While reminders are on, the screen has the time, the lead time, and the date of the next
  * reminder, which it says is approximate. When Android does not show the reminders, for example because the person
  * turned the notifications off in the settings of Android, the screen says so and has the action that fixes it. The
  * screen reads the access again each time it comes back.
+ *
+ * "Wallpaper colours" is on at the start. Off gives the colours of CVKE Fridge (ADR 0008). Android 10 and 11 have no
+ * wallpaper colours, so the switch is not there.
+ *
+ * @param settings The reminder settings, or null before the first read.
+ * @param appearance How the app looks, or null before the first read.
+ * @param insets The insets of the top edge and the sides. The navigation bar is below the screen.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     settings: ReminderSettings?,
-    snackbar: SnackbarHostState,
+    appearance: AppearanceSettings?,
     onSetRemindersOn: (Boolean) -> Unit,
     onSetTime: (minuteOfDay: Int) -> Unit,
     onSetLeadDays: (Int) -> Unit,
     onPermissionAsked: () -> Unit,
     onSendTestReminder: () -> Unit,
-    onBack: () -> Unit,
+    onSetWallpaperColours: (Boolean) -> Unit,
+    insets: PaddingValues,
 ) {
     var timeDialog by rememberSaveable { mutableStateOf(false) }
     var leadDialog by rememberSaveable { mutableStateOf(false) }
 
-    SubScreen(stringResource(R.string.settings), onBack, snackbar, "settings_screen") { padding ->
-        // The settings come from a small file. The screen is empty for the short time of the first read.
-        settings ?: return@SubScreen
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).testTag("settings_screen")) {
+        TopAppBar(title = { Text(stringResource(R.string.settings), Modifier.semantics { heading() }) })
+        // The settings come from small files. The screen is empty for the short time of the first read.
+        if (settings == null || appearance == null) return@Column
         if (timeDialog) {
             TimeDialog(settings.minuteOfDay, onConfirm = { onSetTime(it); timeDialog = false }, onDismiss = { timeDialog = false })
         }
         if (leadDialog) {
             LeadDialog(settings.leadDays, onSelect = { onSetLeadDays(it); leadDialog = false }, onDismiss = { leadDialog = false })
         }
-        Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-            Column(Modifier.widthIn(max = Size.contentMax).fillMaxWidth().verticalScroll(rememberScrollState()).padding(vertical = 8.dp)) {
-                Text(
-                    stringResource(R.string.settings_reminders),
-                    Modifier.padding(horizontal = 16.dp, vertical = 8.dp).semantics { heading() },
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.titleSmall,
-                )
+        val direction = LocalLayoutDirection.current
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(start = insets.calculateStartPadding(direction), end = insets.calculateEndPadding(direction)),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            // The space at the bottom keeps the last setting clear of the add button.
+            Column(
+                Modifier
+                    .widthIn(max = Size.contentMax)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(top = 8.dp, bottom = Size.addButtonsClearance),
+            ) {
+                SectionTitle(stringResource(R.string.settings_reminders))
                 NotificationAccessHost(
                     asked = settings.permissionAsked,
                     onAsked = onPermissionAsked,
@@ -133,9 +158,42 @@ fun SettingsScreen(
                         TestReminderButton(onSendTestReminder, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                     }
                 }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    SectionTitle(stringResource(R.string.settings_appearance), Modifier.padding(top = 16.dp))
+                    SwitchItem(
+                        title = stringResource(R.string.wallpaper_colours),
+                        body = stringResource(R.string.wallpaper_colours_body),
+                        checked = appearance.wallpaperColours,
+                        onChange = onSetWallpaperColours,
+                        tag = "wallpaper_colours_switch",
+                    )
+                }
             }
         }
     }
+}
+
+/** The title of a group of settings. */
+@Composable
+private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text,
+        modifier.padding(horizontal = 16.dp, vertical = 8.dp).semantics { heading() },
+        color = MaterialTheme.colorScheme.primary,
+        style = MaterialTheme.typography.titleSmall,
+    )
+}
+
+/** One setting that is on or off. A tap on the row changes it, and screen readers hear one switch. */
+@Composable
+private fun SwitchItem(title: String, body: String, checked: Boolean, onChange: (Boolean) -> Unit, tag: String) {
+    ListItem(
+        headlineContent = { Text(title) },
+        supportingContent = { Text(body) },
+        trailingContent = { Switch(checked = checked, onCheckedChange = null) },
+        modifier = Modifier.toggleable(checked, role = Role.Switch, onValueChange = onChange).testTag(tag),
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+    )
 }
 
 /** One setting with its value. A tap opens the dialog that changes it. */

@@ -164,7 +164,7 @@ fun MyFridgeScreen(
             LazyColumn(
                 Modifier.widthIn(max = Size.contentMax).fillMaxSize().testTag("my_fridge_screen"),
                 state = list,
-                // The space at the bottom keeps the last card clear of the two buttons that add food.
+                // The space at the bottom keeps the last card clear of the add button.
                 contentPadding = PaddingValues(top = 12.dp, bottom = Size.addButtonsClearance),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {

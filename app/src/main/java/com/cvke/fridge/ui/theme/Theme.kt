@@ -27,14 +27,19 @@ object CvkeFridgeTheme {
  * The app theme: a Material 3 theme for the light and the dark appearance of the system, with the Material type scale
  * and shapes.
  *
- * On Android 12 and later, the colour scheme comes from the wallpaper colours of the phone (dynamic colour). On
- * Android 10 and 11, it is the scheme from the green of FridgeFriend. The status colours and the brand colours do not
- * follow the wallpaper: fresh stays green, expiring stays amber, and the signature gradient keeps its colours.
+ * On Android 12 and later, the colour scheme comes from the wallpaper colours of the phone (dynamic colour), unless the
+ * person turned [wallpaperColours] off in Settings. On Android 10 and 11, and with the setting off, it is the scheme
+ * from the green of FridgeFriend. The status colours and the brand colours do not follow the wallpaper: fresh stays
+ * green, expiring stays amber, and the signature gradient keeps its colours.
  */
 @Composable
-fun CvkeFridgeTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+fun CvkeFridgeTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    wallpaperColours: Boolean = true,
+    content: @Composable () -> Unit,
+) {
     val scheme = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+        wallpaperColours && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }

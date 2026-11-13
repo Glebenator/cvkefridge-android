@@ -81,6 +81,9 @@ object Motion {
     /** Things that arrive, and content after loading. */
     const val ENTER_MILLIS = 340
 
+    /** Things that leave. An exit is shorter than an entrance. */
+    const val EXIT_MILLIS = 240
+
     /** One direction of the brand loop. */
     const val BRAND_LOOP_MILLIS = 2400
 

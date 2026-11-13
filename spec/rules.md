@@ -55,7 +55,12 @@ that is a defect in this folder. Correct it here first.
 ## 5. Batches and the use-first order
 
 - A batch is **active** when its quantity is above 0. A batch with a quantity of 0 is **ended**.
-- An expiry date has a source: `printed` or `estimated`. A batch has both the date and the source, or none of the two.
+- An expiry date has a source: `printed`, `estimated`, or `chosen`. A batch has both the date and the source, or none of
+  the two.
+  - `printed`: the date on the package, which the person entered.
+  - `estimated`: the date from the table of foods (rule 4).
+  - `chosen`: a later date that the person selected because the food is still good after its printed or estimated
+    date. It is not from the package and not from the table.
 - The **use-first order** of active batches:
   1. A batch with an expiry date comes before a batch without one.
   2. The earlier expiry date comes first. The source of the date has no effect.

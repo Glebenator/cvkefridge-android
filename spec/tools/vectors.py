@@ -19,7 +19,7 @@ VECTORS = SPEC / "vectors"
 CATEGORIES = ["produce", "dairy", "meat", "condiment", "beverage", "bakery", "leftovers", "other"]
 UNITS = ["pcs", "g", "kg", "ml", "l", "pack", "bottle", "slice", "cup"]
 STORAGE_KINDS = ["pantry", "fridge", "freezer"]
-EXPIRY_SOURCES = ["printed", "estimated"]
+EXPIRY_SOURCES = ["printed", "estimated", "chosen"]
 ID_CHARACTERS = set("abcdefghijklmnopqrstuvwxyz0123456789-")
 EPOCH = datetime.date(1970, 1, 1)
 

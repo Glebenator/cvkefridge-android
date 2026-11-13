@@ -33,8 +33,9 @@ CVKE Fridge has three repositories. This repository is the native Android app.
 
 - Use Material components, theme colours, typography, and standard Android navigation.
 - Support system light and dark themes, edge-to-edge insets, and screen rotation. On Android 12 and later,
-  the colour scheme comes from the wallpaper colours of the phone (dynamic colour). On Android 10 and 11, it comes from
-  the green of FridgeFriend (ADR 0007 in the cvkefridge repository). Take colours from `MaterialTheme.colorScheme`,
+  the colour scheme comes from the wallpaper colours of the phone (dynamic colour), unless the person turns
+  "Wallpaper colours" off in Settings. On Android 10 and 11, and with the setting off, it comes from the green of
+  FridgeFriend (ADR 0007 and ADR 0008 in the cvkefridge repository). Take colours from `MaterialTheme.colorScheme`,
   and do not change one colour of the scheme by hand. A colour with a fixed meaning (fresh, expiring) or a brand
   colour comes from `CvkeFridgeTheme.status` or `CvkeFridgeTheme.brand`. Do not use a role of the scheme for it,
   because the scheme can have any hue.
@@ -73,8 +74,7 @@ CVKE Fridge has three repositories. This repository is the native Android app.
 - The workflow `.github/workflows/android.yml` checks the copy of the shared specification, builds the app, runs lint
   and the unit tests, builds the release APK and bundle, and runs the device tests on an emulator for each push to
   `main` and each pull request. Check its result before you report a change as verified.
-- The cvkefridge repository starts a progress report with the first feature. Its rules will be in the `AGENTS.md` file
-  there.
+- The cvkefridge repository has the progress report (`PROGRESS.html`). Its rules are in the `AGENTS.md` file there.
 
 ## Agent skills
 

@@ -8,8 +8,14 @@ package com.cvke.fridge.core
  * @property key The text of the value in the shared specification.
  */
 enum class ExpirySource(val key: String) {
+    /** The date on the package, which the person entered. */
     PRINTED("printed"),
-    ESTIMATED("estimated");
+
+    /** The date from the table of foods. */
+    ESTIMATED("estimated"),
+
+    /** A later date that the person selected because the food is still good. */
+    CHOSEN("chosen");
 
     companion object {
         fun fromKey(key: String): ExpirySource? = entries.firstOrNull { it.key == key }

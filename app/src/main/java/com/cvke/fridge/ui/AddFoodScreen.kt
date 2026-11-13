@@ -1,9 +1,18 @@
 package com.cvke.fridge.ui
 
+import android.net.Uri
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
@@ -11,7 +20,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +37,7 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -38,8 +47,10 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -57,6 +68,9 @@ import com.cvke.fridge.inventory.InventoryAction
 import com.cvke.fridge.inventory.Suggestion
 import com.cvke.fridge.lookup.ScanSource
 import com.cvke.fridge.lookup.Scanned
+import com.cvke.fridge.photo.PreparedPhoto
+import com.cvke.fridge.photo.ProductPhoto
+import com.cvke.fridge.ui.theme.BrandSpinner
 import java.text.DecimalFormatSymbols
 import java.util.UUID
 
@@ -79,8 +93,16 @@ import java.util.UUID
  * barcode, the name is empty and has the focus, and the barcode stays. "Save and scan next" saves and shows the
  * scanner again. The name field of an empty form has a button that opens the scanner.
  *
+ * The form can give the food a photo: "Take a photo" opens the camera app, and "Choose a photo" opens the photo picker
+ * (see [rememberPhotoSources]). The field is at the end of the form, because the photo is optional. It is there for a
+ * new food, and for a food in the inventory with no photo. The app makes the photo at once, and the product gets it
+ * after the save.
+ *
  * A write that fails leaves the form as it is, with a message above the buttons.
  *
+ * @param photos The photo of each product that has one.
+ * @param formPhotos The photos that the app makes for the add forms, by the token of the form.
+ * @param onPerform Saves the action. It also gets the photo of the form, or null.
  * @param onSaved The changes are in the change log. It gets true for "Save and scan next".
  */
 @Composable
@@ -89,7 +111,15 @@ fun AddFoodScreen(
     state: FridgeUiState,
     formWrite: FormWrite,
     snackbar: SnackbarHostState,
-    onPerform: (InventoryAction, String) -> Unit,
+    photos: Map<String, ProductPhoto>,
+    formPhotos: Map<String, FormPhoto>,
+    pickPhoto: ActivityResultContract<Unit, Uri?>,
+    takePhoto: ActivityResultContract<Uri, Boolean>,
+    newCapture: suspend () -> Uri,
+    onMakePhoto: (token: String, Uri) -> Unit,
+    onFormPhotoRead: (token: String) -> Unit,
+    onDiscardPhoto: (PreparedPhoto) -> Unit,
+    onPerform: (InventoryAction, String, PreparedPhoto?) -> Unit,
     onFormWriteRead: (String) -> Unit,
     onManageAreas: () -> Unit,
     onScan: () -> Unit,
@@ -122,6 +152,16 @@ fun AddFoodScreen(
         )
     }
     var another by rememberSaveable { mutableStateOf(false) }
+    // The path of the photo of the form. It stays when Android stops the app in the background.
+    var photo by rememberSaveable { mutableStateOf<String?>(null) }
+    val makingPhoto = formPhotos[token] == FormPhoto.Making
+    LaunchedEffect(formPhotos[token]) {
+        val made = formPhotos[token] as? FormPhoto.Ready ?: return@LaunchedEffect
+        photo?.let { onDiscardPhoto(PreparedPhoto(it)) }
+        photo = made.photo.path
+        onFormPhotoRead(token)
+    }
+    val sources = rememberPhotoSources(pickPhoto, takePhoto, newCapture) { onMakePhoto(token, it) }
     val nameFocus = remember { FocusRequester() }
     var nameFocused by remember { mutableStateOf(false) }
     // With no name from the lookup, the person types the name first.
@@ -140,24 +180,28 @@ fun AddFoodScreen(
                 scan != null -> onSaved(another)
                 another -> {
                     form = form.next()
+                    // The saved food got the photo.
+                    photo = null
                     nameFocus.requestFocus()
                 }
                 else -> onSaved(false)
             }
         }
     }
+    val existing = form.product(products)
+    // A food in the inventory that has a photo keeps it. The form then has no photo field.
+    val photoField = existing == null || photos[existing.id] == null
     fun save(addAnother: Boolean) {
-        if (saving) return
+        if (saving || makingPhoto) return
         val action = form.action(products, areas, ready.foods, ready.today)
         if (action == null) {
             form = form.copy(checked = true)
         } else {
             another = addAnother
-            onPerform(action, token)
+            onPerform(action, token, photo?.takeIf { photoField }?.let(::PreparedPhoto))
         }
     }
 
-    val existing = form.product(products)
     val inStock = remember(ready.inventory) { ready.inventory.activeBatches.mapTo(HashSet()) { it.productId } }
     val area = areas.firstOrNull { it.id == form.storageAreaId }
     val suggested = form.estimate(products, areas, ready.foods, ready.today)
@@ -188,6 +232,8 @@ fun AddFoodScreen(
     ) { padding ->
         FormColumn(padding) {
             if (scan != null) ScanNote(scan)
+            // A new food can come from a barcode. The card is first in the form, so the scanner is one tap away.
+            if (scan == null && screen.productId == null) ScanCard(onScan)
             OutlinedTextField(
                 value = form.name,
                 onValueChange = { form = form.withName(it, ready.foods) },
@@ -198,13 +244,6 @@ fun AddFoodScreen(
                     .semantics { if (nameError != null) error(nameError) }
                     .testTag("field_name"),
                 label = { Text(stringResource(R.string.field_name)) },
-                trailingIcon = if (scan != null || form.name.isNotEmpty()) null else {
-                    {
-                        IconButton(onScan, Modifier.testTag("name_scan")) {
-                            Icon(painterResource(R.drawable.ic_barcode_scan), contentDescription = stringResource(R.string.action_scan_barcode))
-                        }
-                    }
-                },
                 supportingText = when {
                     nameError != null -> ({ Text(nameError, Modifier.testTag("error_name")) })
                     existing != null -> ({
@@ -290,7 +329,58 @@ fun AddFoodScreen(
                 estimateHint = estimateHint(form.food(products, ready.foods), area?.kind),
                 onChange = { form = form.copy(expiry = it) },
             )
+            if (photoField) {
+                FormPhotoField(
+                    photo = photo,
+                    making = makingPhoto,
+                    sources = sources,
+                    onRemove = {
+                        photo?.let { onDiscardPhoto(PreparedPhoto(it)) }
+                        photo = null
+                    },
+                )
+            }
             if (failed != null) SaveFailedNote(failed.reason)
+        }
+    }
+}
+
+/**
+ * The photo of the add form: "Take a photo" and "Choose a photo", or the photo with "Change photo" and "Remove". While
+ * the app makes the photo, the field says so, and screen readers hear it.
+ */
+@Composable
+private fun FormPhotoField(photo: String?, making: Boolean, sources: PhotoSources, onRemove: () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    Column(Modifier.fillMaxWidth().testTag("form_photo"), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            stringResource(R.string.field_photo),
+            Modifier.semantics { heading() },
+            color = scheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelLarge,
+        )
+        when {
+            making -> Row(
+                Modifier.heightIn(min = 48.dp).semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }.testTag("form_photo_making"),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BrandSpinner()
+                Text(stringResource(R.string.photo_adding), color = scheme.onSurface, style = MaterialTheme.typography.bodyLarge)
+            }
+            photo != null -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                ProductPhotoImage(
+                    ProductPhoto(photo),
+                    MaterialTheme.shapes.medium,
+                    scheme.surfaceContainerHigh,
+                    Modifier.size(96.dp).testTag("form_photo_image"),
+                )
+                Column {
+                    ChangePhotoButton(sources)
+                    PhotoButton(R.drawable.ic_image_remove, R.string.photo_remove, "form_photo_remove", onRemove)
+                }
+            }
+            else -> PhotoButtons(sources)
         }
     }
 }
@@ -440,10 +530,45 @@ fun expiryInputText(input: ExpiryInput): String = when (input) {
     ExpiryInput.Suggested -> "suggested"
     ExpiryInput.None -> "none"
     is ExpiryInput.Printed -> input.date.text
+    is ExpiryInput.Chosen -> CHOSEN_PREFIX + input.date.text
 }
 
 fun expiryInputOf(text: String): ExpiryInput = when (text) {
     "suggested" -> ExpiryInput.Suggested
     "none" -> ExpiryInput.None
-    else -> CalendarDate.parse(text)?.let(ExpiryInput::Printed) ?: ExpiryInput.Suggested
+    else -> if (text.startsWith(CHOSEN_PREFIX)) {
+        CalendarDate.parse(text.removePrefix(CHOSEN_PREFIX))?.let(ExpiryInput::Chosen) ?: ExpiryInput.Suggested
+    } else {
+        CalendarDate.parse(text)?.let(ExpiryInput::Printed) ?: ExpiryInput.Suggested
+    }
+}
+
+private const val CHOSEN_PREFIX = "chosen:"
+
+/**
+ * The large button at the top of the form for a new food: it opens the scanner, and the scan fills in the form. It
+ * is larger than the fields, because a scan is the fast way to add food that has a barcode.
+ */
+@Composable
+private fun ScanCard(onScan: () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    Surface(
+        onClick = onScan,
+        modifier = Modifier.fillMaxWidth().testTag("name_scan"),
+        shape = RoundedCornerShape(24.dp),
+        color = scheme.primaryContainer,
+        contentColor = scheme.onPrimaryContainer,
+    ) {
+        Row(Modifier.heightIn(min = 88.dp).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(Modifier.size(56.dp), shape = CircleShape, color = scheme.primary, contentColor = scheme.onPrimary) {
+                Icon(painterResource(R.drawable.ic_barcode_scan), contentDescription = null, Modifier.padding(16.dp))
+            }
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.action_scan_barcode), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.scan_card_text), style = MaterialTheme.typography.bodyMedium)
+            }
+            Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null)
+        }
+    }
 }

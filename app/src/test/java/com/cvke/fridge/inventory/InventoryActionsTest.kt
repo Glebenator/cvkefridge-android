@@ -53,6 +53,28 @@ class InventoryActionsTest {
     private fun quantities(changes: List<Change>) = Inventory.replay(changes).batches.associate { it.id to it.quantity }
 
     @Test
+    fun aLaterExpiryDateChangesOnlyTheExpiryDateAndCanBeUndone() {
+        val (planned, changes) = apply(InventoryAction.MoveExpiry("m-old", date("2026-11-20")))
+        assertEquals(NoticeMessage.ExpiryMoved("Milk", date("2026-11-20")), planned.message)
+        assertTrue(planned.undoable)
+        val moved = Inventory.replay(changes).batches.single { it.id == "m-old" }
+        assertEquals(ExpiryDate(date("2026-11-20"), ExpirySource.CHOSEN), moved.expiry)
+        assertEquals(1_000L, moved.quantity)
+        assertEquals("fridge", moved.storageAreaId)
+        assertEquals(date("2026-11-01"), moved.dateAdded)
+
+        val ids = changes.takeLast(planned.bodies.size).map { it.id }
+        val (_, undone) = apply(InventoryAction.Undo(ids), changes)
+        assertEquals(date("2026-11-13"), Inventory.replay(undone).batches.single { it.id == "m-old" }.expiry?.date)
+    }
+
+    @Test
+    fun aLaterExpiryDateOfABatchThatIsNotThereIsRefused() {
+        val planned = InventoryActions.plan(InventoryAction.MoveExpiry("none", today), inventory, today, newId)
+        assertEquals(Planned.Refused(RejectionReason.UNKNOWN_BATCH), planned)
+    }
+
+    @Test
     fun aNewFoodIsAProductAndABatchThatIsAddedToday() {
         val action = InventoryAction.AddFood(null, "Butter", Category.DAIRY, MeasureUnit.G, "fk-1", 250_000, "fridge", null)
         val (planned, changes) = apply(action)

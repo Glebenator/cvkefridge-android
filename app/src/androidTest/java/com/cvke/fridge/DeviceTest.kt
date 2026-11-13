@@ -34,7 +34,7 @@ abstract class DeviceTest {
         // The cache of an earlier run of the tests is not used. Each test of this run looks up its own barcodes.
         File(app.filesDir, "product-lookups.json").delete()
         scenario = if (intent == null) ActivityScenario.launch(MainActivity::class.java) else ActivityScenario.launch(intent)
-        // The app reads the change log after the start. The button that adds food is there when the inventory is loaded.
+        // The app reads the change log after the start. The add button is there when the inventory is loaded.
         waitFor(hasTestTag("add_food"))
     }
 

@@ -19,6 +19,9 @@ import kotlinx.coroutines.withContext
  * [PhotoFiles]). Backup is off, so the photos stay on the phone. The store keeps no reference to the picture that the
  * person selected: [save] writes a copy, and the copy is the photo.
  *
+ * The add form can have a photo before the product exists. [prepare] writes such a photo into [preparedDirectory], and
+ * [adopt] makes it the photo of the product after the save.
+ *
  * One change runs at a time. Each file operation is off the main thread.
  *
  * @param newToken Makes the random part of the name of a new photo.
@@ -27,6 +30,8 @@ class PhotoStore(
     private val directory: File,
     private val io: CoroutineDispatcher = Dispatchers.IO,
     private val newToken: () -> String = { UUID.randomUUID().toString() },
+    private val preparedDirectory: File = File(directory.parentFile, directory.name + "-prepared"),
+    private val now: () -> Long = System::currentTimeMillis,
 ) {
     private val mutex = Mutex()
     private var read = false
@@ -117,6 +122,55 @@ class PhotoStore(
         _photos.value = kept
     }
 
+    /**
+     * Writes a photo for a product that does not exist yet: the photo of the add form. [encode] writes the JPEG. The
+     * result is the file of the photo.
+     *
+     * @throws IOException when the file cannot be written, and each exception of [encode].
+     */
+    suspend fun prepare(encode: (OutputStream) -> Unit): PreparedPhoto = withContext(io) {
+        preparedDirectory.mkdirs()
+        val target = File(preparedDirectory, newToken() + PhotoFiles.EXTENSION)
+        try {
+            target.outputStream().use { stream ->
+                stream.buffered().let { buffered ->
+                    encode(buffered)
+                    buffered.flush()
+                }
+            }
+        } catch (failure: Exception) {
+            target.delete()
+            throw failure
+        }
+        PreparedPhoto(target.path)
+    }
+
+    /**
+     * Makes a prepared photo the photo of the product, and deletes the prepared file.
+     *
+     * @throws IOException when the prepared file cannot be read or the photo cannot be written.
+     */
+    suspend fun adopt(productId: String, prepared: PreparedPhoto): ProductPhoto {
+        val file = prepared.file(preparedDirectory) ?: throw IOException("Not a prepared photo")
+        val photo = save(productId) { out -> file.inputStream().use { it.copyTo(out) } }
+        discard(prepared)
+        return photo
+    }
+
+    /** Deletes a prepared photo that no product got, for example after "Remove" in the add form. */
+    suspend fun discard(prepared: PreparedPhoto) {
+        withContext(io) { prepared.file(preparedDirectory)?.delete() }
+    }
+
+    /** Deletes the prepared photos that are older than one day: the photos of forms that closed with no save. */
+    suspend fun cleanPrepared() = withContext(io) {
+        val limit = now() - PREPARED_MAX_AGE_MILLIS
+        preparedDirectory.listFiles()?.filter { it.lastModified() < limit }?.forEach { it.delete() }
+    }
+
+    /** The file of a prepared photo, only when it is in the folder of the prepared photos. */
+    private fun PreparedPhoto.file(folder: File): File? = File(path).takeIf { it.parentFile?.canonicalPath == folder.canonicalPath }
+
     private suspend fun readOnce() {
         if (read) return
         val found = withContext(io) {
@@ -125,5 +179,9 @@ class PhotoStore(
         }
         _photos.value = found
         read = true
+    }
+
+    private companion object {
+        const val PREPARED_MAX_AGE_MILLIS = 24L * 60 * 60 * 1000
     }
 }

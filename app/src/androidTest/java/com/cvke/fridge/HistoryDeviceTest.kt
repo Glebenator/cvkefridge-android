@@ -1,5 +1,7 @@
 package com.cvke.fridge
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
@@ -11,12 +13,16 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.swipeRight
+import androidx.core.content.ContextCompat
 import androidx.test.core.app.ActivityScenario
+import androidx.test.platform.app.InstrumentationRegistry
 import com.cvke.fridge.core.Batch
 import com.cvke.fridge.core.Category
 import com.cvke.fridge.core.Change
@@ -35,7 +41,8 @@ import org.junit.Test
 
 /**
  * History, "Add again", and the product photo, with the real change log and the real photo folder on the device. The
- * photo comes from [TestPhotoPicker] in the place of the photo picker of Android.
+ * photo comes from [TestPhotoPicker] in the place of the photo picker of Android, and from [TestPhotoCamera] in the
+ * place of the camera app.
  */
 class HistoryDeviceTest : DeviceTest() {
     private fun log(vararg bodies: ChangeBody): List<Change> =
@@ -156,7 +163,7 @@ class HistoryDeviceTest : DeviceTest() {
             waitFor(hasTestTag("food_screen"))
         }
         openMilk()
-        rule.onNodeWithTag("photo_add").performClick()
+        rule.onNodeWithTag("photo_choose").performClick()
         waitFor(hasTestTag("food_photo"))
 
         // The photo is a copy in the private files, with its longest edge at 1024 pixels.
@@ -176,14 +183,71 @@ class HistoryDeviceTest : DeviceTest() {
 
         // "Undo" brings the photo back.
         rule.onNodeWithTag("photo_remove").performClick()
-        waitFor(hasTestTag("photo_add"))
+        waitFor(hasTestTag("photo_choose"))
         rule.onNodeWithText("Undo").performClick()
         waitFor(hasTestTag("food_photo"))
 
         // With no undo, the file goes when the message closes.
         rule.onNodeWithTag("photo_remove").performClick()
-        waitFor(hasTestTag("photo_add"))
+        waitFor(hasTestTag("photo_choose"))
         rule.waitUntil(MESSAGE_MILLIS) { photos.list().isNullOrEmpty() }
+    }
+
+    @Test
+    fun aPhotoFromTheCameraGoesToTheFoodAndThePictureOfTheCameraGoes() {
+        start(log(product("t-milk", "Milk", MeasureUnit.L), batch("t-milk-1", "t-milk", 1_000, "fridge", added = 1)))
+        rule.onNodeWithTag("tab_my_fridge").performClick()
+        rule.onNodeWithTag("food_t-milk/fridge").performClick()
+        waitFor(hasTestTag("food_screen"))
+
+        // With no camera permission, a dialog explains it before Android asks. "Not now" asks nothing.
+        val camera = Manifest.permission.CAMERA
+        if (ContextCompat.checkSelfPermission(app, camera) != PackageManager.PERMISSION_GRANTED) {
+            rule.onNodeWithTag("photo_take").performClick()
+            rule.onNodeWithTag("photo_camera_explain").assertIsDisplayed()
+            rule.onNodeWithText("Not now").performClick()
+            waitUntilGone(hasTestTag("photo_camera_explain"))
+            InstrumentationRegistry.getInstrumentation().uiAutomation.grantRuntimePermission(app.packageName, camera)
+        }
+
+        rule.onNodeWithTag("photo_take").performClick()
+        waitFor(hasTestTag("food_photo"))
+        // The photo is a copy with its longest edge at 1024 pixels. The picture of the camera app is gone.
+        val file = checkNotNull(photos.listFiles()).single()
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.path, bounds)
+        assertEquals(768 to 1024, bounds.outWidth to bounds.outHeight)
+        rule.waitUntil(MESSAGE_MILLIS) { File(app.cacheDir, "camera").list().isNullOrEmpty() }
+
+        // "Change photo" has the two sources.
+        rule.onNodeWithTag("photo_change").performClick()
+        rule.onNodeWithTag("photo_change_choose").performClick()
+        // The new photo replaces the photo of the camera. During the write, the folder also has a temporary file.
+        rule.waitUntil(MESSAGE_MILLIS) { app.photos.photos.value["t-milk"]?.path.let { it != null && it != file.path } }
+        rule.waitUntil(MESSAGE_MILLIS) { photos.list()?.size == 1 }
+    }
+
+    @Test
+    fun aPhotoOfTheAddFormGoesToTheNewFood() {
+        start(log())
+        rule.onNodeWithTag("add_food").performClick()
+        waitFor(hasTestTag("add_food_screen"))
+        rule.onNodeWithTag("field_name").performTextInput("Butter")
+        rule.onNodeWithTag("form_photo").performScrollTo()
+        rule.onNodeWithTag("photo_choose").performScrollTo().performClick()
+        waitFor(hasTestTag("form_photo_image"))
+        // The form keeps the photo until the save. The food does not exist yet.
+        assertTrue(photos.list().isNullOrEmpty())
+
+        rule.onNodeWithTag("save").performClick()
+        waitUntilGone(hasTestTag("add_food_screen"))
+        val butter = inventory().products.single { it.name == "Butter" }
+        rule.waitUntil(MESSAGE_MILLIS) { photos.list()?.singleOrNull()?.startsWith(butter.id + ".") == true }
+        assertTrue(File(app.cacheDir, "prepared-photos").list().isNullOrEmpty())
+
+        rule.onNodeWithTag("tab_my_fridge").performClick()
+        rule.onNodeWithTag("food_${butter.id}/fridge").performClick()
+        waitFor(hasTestTag("food_photo"))
     }
 
     private companion object {

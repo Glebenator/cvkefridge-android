@@ -347,6 +347,45 @@
       "expect": {
         "order": []
       }
+    },
+    {
+      "name": "a chosen date sorts by its date like the other sources",
+      "batches": [
+        {
+          "id": "b-1",
+          "productId": "p-1",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-01",
+          "expiryDate": "2026-11-14",
+          "expirySource": "chosen"
+        },
+        {
+          "id": "b-2",
+          "productId": "p-2",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-02",
+          "expiryDate": "2026-11-13",
+          "expirySource": "printed"
+        },
+        {
+          "id": "b-3",
+          "productId": "p-3",
+          "quantity": 1000,
+          "storageAreaId": "fridge",
+          "dateAdded": "2026-11-03",
+          "expiryDate": "2026-11-15",
+          "expirySource": "estimated"
+        }
+      ],
+      "expect": {
+        "order": [
+          "b-2",
+          "b-1",
+          "b-3"
+        ]
+      }
     }
   ]
 }

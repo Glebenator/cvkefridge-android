@@ -1,6 +1,7 @@
 package com.cvke.fridge.ui
 
 import android.net.Uri
+import androidx.datastore.core.DataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cvke.fridge.core.CalendarDate
@@ -24,12 +25,16 @@ import com.cvke.fridge.lookup.ProductLookup
 import com.cvke.fridge.lookup.ScanSource
 import com.cvke.fridge.lookup.Scanned
 import com.cvke.fridge.lookup.ScannedFoods
+import com.cvke.fridge.photo.CameraCaptures
 import com.cvke.fridge.photo.PhotoEncoder
 import com.cvke.fridge.photo.PhotoStore
+import com.cvke.fridge.photo.PreparedPhoto
 import com.cvke.fridge.photo.ProductPhoto
 import com.cvke.fridge.photo.RemovedPhoto
 import com.cvke.fridge.reminder.ReminderSettings
 import com.cvke.fridge.reminder.Reminders
+import com.cvke.fridge.settings.AppearanceSettings
+import com.cvke.fridge.settings.AppearanceSettingsSerializer
 import java.io.IOException
 import java.util.UUID
 import kotlinx.coroutines.CoroutineDispatcher
@@ -39,6 +44,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -113,6 +119,13 @@ sealed interface LookupState {
  */
 data class ShowRequest(val id: Long, val freshness: Set<Freshness>)
 
+/** The photo of the add form while the app makes it from a picture, and after. */
+sealed interface FormPhoto {
+    data object Making : FormPhoto
+
+    data class Ready(val photo: PreparedPhoto) : FormPhoto
+}
+
 /** The state of the write of a form. The [token] names the form, so that a form does not read the result of another form. */
 sealed interface FormWrite {
     data object Idle : FormWrite
@@ -145,6 +158,8 @@ sealed interface FormWrite {
  * @param reminders The daily reminder: its settings, its alarm, and the notification.
  * @param photoStore The photos of the products.
  * @param photoEncoder Makes a photo from a picture that the person selected.
+ * @param cameraCaptures The files of the pictures of the camera app. A file goes after the app made the photo.
+ * @param appearanceStore How the app looks.
  * @param now The instant of now, in milliseconds from 1970-01-01T00:00:00Z.
  * @param newId Makes a random identifier for a product, a batch, a storage area, or a change.
  */
@@ -157,6 +172,8 @@ class FridgeViewModel(
     private val reminders: Reminders,
     private val photoStore: PhotoStore,
     private val photoEncoder: PhotoEncoder,
+    private val cameraCaptures: CameraCaptures,
+    private val appearanceStore: DataStore<AppearanceSettings>,
     private val now: () -> Long = System::currentTimeMillis,
     private val newId: () -> String = { UUID.randomUUID().toString() },
     private val work: CoroutineDispatcher = Dispatchers.Default,
@@ -194,6 +211,19 @@ class FridgeViewModel(
     /** The products that get a new photo now. */
     val photoImports: StateFlow<Set<String>> = _photoImports.asStateFlow()
 
+    private val _formPhotos = MutableStateFlow<Map<String, FormPhoto>>(emptyMap())
+
+    /**
+     * The photos that the app makes for add forms, by the token of the form. A form takes its photo with
+     * [formPhotoRead], and then keeps it.
+     */
+    val formPhotos: StateFlow<Map<String, FormPhoto>> = _formPhotos.asStateFlow()
+
+    /** How the app looks, or null before the first read. A file that cannot be read gives the default settings. */
+    val appearance: StateFlow<AppearanceSettings?> = appearanceStore.data
+        .catch { failure -> if (failure is IOException) emit(AppearanceSettingsSerializer.defaultValue) else throw failure }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
     /** What the last read or write gave. One read or write runs at a time. */
     private class Loaded(val changes: List<Change>, val inventory: Inventory, val foods: FoodTable, val origin: String)
 
@@ -212,9 +242,18 @@ class FridgeViewModel(
                 // The screens show the category icons.
             }
         }
+        viewModelScope.launch {
+            // The files of forms that closed with no save, and of pictures of the camera that did not come back.
+            try {
+                photoStore.cleanPrepared()
+                cameraCaptures.clean()
+            } catch (_: IOException) {
+                // The next start tries again.
+            }
+        }
         load()
         // Sets the alarm again. Android removes it when the person stops the app in its settings.
-        reminderAction { reminders.restore() }
+        settingsAction { reminders.restore() }
     }
 
     /** Reads the change log again. The content on the screen stays until the new content replaces it. */
@@ -258,10 +297,12 @@ class FridgeViewModel(
      * inventory. The result of an action with a [formToken] is in [formWrite]. The result of the other actions, and
      * the message of each action, is in [notice]. The write continues when the screen that started it closes.
      */
-    fun perform(action: InventoryAction, formToken: String? = null) {
+    fun perform(action: InventoryAction, formToken: String? = null, photo: PreparedPhoto? = null) {
         if (formToken != null) _formWrite.value = FormWrite.Saving(formToken)
         viewModelScope.launch {
             val result = mutex.withLock { write(action) }
+            // The photo of the add form goes to the product after the write. A product that is not saved gets no photo.
+            if (photo != null && result is WriteResult.Done && result.productId != null) adoptPhoto(result.productId, photo)
             if (formToken != null) {
                 _formWrite.value = when (result) {
                     is WriteResult.Done -> FormWrite.Saved(formToken)
@@ -320,9 +361,74 @@ class FridgeViewModel(
                 true
             } finally {
                 _photoImports.update { it - productId }
+                discardCapture(uri)
             }
             if (failed) _notice.value = Notice(++noticeCount, NoticeMessage.PhotoFailed)
         }
+    }
+
+    /**
+     * Makes the photo of the add form with the [token] from the picture at [uri], off the main thread. The product does
+     * not exist yet: [perform] gives the photo to the product after the save. A picture that cannot be read gives a
+     * message, and the form keeps the photo that it had.
+     */
+    fun makeFormPhoto(token: String, uri: Uri) {
+        _formPhotos.update { it + (token to FormPhoto.Making) }
+        viewModelScope.launch {
+            val photo = try {
+                photoStore.prepare { out -> photoEncoder.encode(uri, out) }
+            } catch (_: IOException) {
+                null
+            } catch (_: SecurityException) {
+                null
+            } catch (_: IllegalArgumentException) {
+                null
+            } finally {
+                discardCapture(uri)
+            }
+            _formPhotos.update { if (photo == null) it - token else it + (token to FormPhoto.Ready(photo)) }
+            if (photo == null) _notice.value = Notice(++noticeCount, NoticeMessage.PhotoFailed)
+        }
+    }
+
+    /** The form with the [token] took its photo. */
+    fun formPhotoRead(token: String) = _formPhotos.update { if (it[token] is FormPhoto.Ready) it - token else it }
+
+    /** Deletes a photo of the add form that no product got: the person removed it or selected another. */
+    fun discardFormPhoto(photo: PreparedPhoto) {
+        viewModelScope.launch {
+            try {
+                photoStore.discard(photo)
+            } catch (_: IOException) {
+                // The cleanup at the next start deletes it.
+            }
+        }
+    }
+
+    /** Gives the photo of the add form to the product that the form saved. */
+    private suspend fun adoptPhoto(productId: String, photo: PreparedPhoto) {
+        try {
+            photoStore.adopt(productId, photo)
+        } catch (_: IOException) {
+            _notice.value = Notice(++noticeCount, NoticeMessage.PhotoFailed)
+        }
+    }
+
+    /** Deletes the file of a picture of the camera app. The app keeps only the photo that it made from it. */
+    private suspend fun discardCapture(uri: Uri) {
+        try {
+            cameraCaptures.discard(uri)
+        } catch (_: IOException) {
+            // The cleanup at the next start deletes it.
+        }
+    }
+
+    /** Makes the address of a new file for a picture of the camera app. */
+    suspend fun newCameraCapture(): Uri = cameraCaptures.newCapture()
+
+    /** Turns the wallpaper colours on or off. */
+    fun setWallpaperColours(on: Boolean) = settingsAction {
+        appearanceStore.updateData { it.copy(wallpaperColours = on) }
     }
 
     /** Removes the photo of the product. The message has "Undo". */
@@ -394,26 +500,26 @@ class FridgeViewModel(
     }
 
     /** Turns reminders on or off. [fromOffer] is true for the offer on Home, which then says that reminders are on. */
-    fun setRemindersOn(on: Boolean, fromOffer: Boolean = false) = reminderAction {
+    fun setRemindersOn(on: Boolean, fromOffer: Boolean = false) = settingsAction {
         reminders.setEnabled(on)
         if (on && fromOffer) _notice.value = Notice(++noticeCount, NoticeMessage.RemindersOn)
     }
 
-    fun setReminderTime(minuteOfDay: Int) = reminderAction { reminders.setTime(minuteOfDay) }
+    fun setReminderTime(minuteOfDay: Int) = settingsAction { reminders.setTime(minuteOfDay) }
 
-    fun setReminderLeadDays(days: Int) = reminderAction { reminders.setLeadDays(days) }
+    fun setReminderLeadDays(days: Int) = settingsAction { reminders.setLeadDays(days) }
 
     /** Home does not offer reminders again, and says where the switch is. */
-    fun dismissReminderOffer() = reminderAction {
+    fun dismissReminderOffer() = settingsAction {
         reminders.dismissOffer()
         _notice.value = Notice(++noticeCount, NoticeMessage.RemindersInSettings)
     }
 
     /** The app asked Android for the notification permission. */
-    fun notificationPermissionAsked() = reminderAction { reminders.permissionAsked() }
+    fun notificationPermissionAsked() = settingsAction { reminders.permissionAsked() }
 
     /** Shows the reminder of today now. Only the debug build has a control for it. */
-    fun sendTestReminder() = reminderAction {
+    fun sendTestReminder() = settingsAction {
         _notice.value = Notice(++noticeCount, NoticeMessage.TestReminder(reminders.sendTest()))
     }
 
@@ -424,8 +530,8 @@ class FridgeViewModel(
 
     fun showRequestDone(id: Long) = _showRequest.update { if (it?.id == id) null else it }
 
-    /** Runs a change of the reminder settings. A settings file that cannot be written gives a message. */
-    private fun reminderAction(action: suspend () -> Unit) {
+    /** Runs a change of the settings. A settings file that cannot be written gives a message. */
+    private fun settingsAction(action: suspend () -> Unit) {
         viewModelScope.launch {
             try {
                 action()
@@ -447,7 +553,13 @@ class FridgeViewModel(
     }
 
     private sealed interface WriteResult {
-        data class Done(val changeIds: List<String>, val message: NoticeMessage?, val undoable: Boolean) : WriteResult
+        /** [productId] is the product of an [InventoryAction.AddFood], also when the action made the product. */
+        data class Done(
+            val changeIds: List<String>,
+            val message: NoticeMessage?,
+            val undoable: Boolean,
+            val productId: String? = null,
+        ) : WriteResult
 
         data class Refused(val reason: RejectionReason) : WriteResult
 
@@ -477,7 +589,10 @@ class FridgeViewModel(
         loaded = next
         _state.value = ready(next)
         inventoryChanged(inventory)
-        return WriteResult.Done(added.map(Change::id), planned.message, planned.undoable)
+        val productId = (action as? InventoryAction.AddFood)?.let { add ->
+            add.productId ?: planned.bodies.firstNotNullOfOrNull { (it as? ChangeBody.ProductSaved)?.product?.id }
+        }
+        return WriteResult.Done(added.map(Change::id), planned.message, planned.undoable, productId)
     }
 
     private suspend fun ready(loaded: Loaded): FridgeUiState.Ready = withContext(work) {

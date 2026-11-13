@@ -13,6 +13,12 @@ sealed interface ExpiryInput {
     /** The printed date that the person entered. The app does not change it. */
     data class Printed(val date: CalendarDate) : ExpiryInput
 
+    /**
+     * The date that the person chose because the food was still good (see [LaterExpiry]). It stays a chosen date while
+     * the person does not select another date in the form.
+     */
+    data class Chosen(val date: CalendarDate) : ExpiryInput
+
     /** No expiry date. */
     data object None : ExpiryInput
 
@@ -22,6 +28,7 @@ sealed interface ExpiryInput {
             null -> None
             ExpirySource.PRINTED -> Printed(expiry.date)
             ExpirySource.ESTIMATED -> Suggested
+            ExpirySource.CHOSEN -> Chosen(expiry.date)
         }
     }
 }
@@ -32,6 +39,7 @@ object ExpiryChoice {
     fun expiry(input: ExpiryInput, suggested: ExpiryDate?): ExpiryDate? = when (input) {
         ExpiryInput.Suggested -> suggested
         is ExpiryInput.Printed -> ExpiryDate(input.date, ExpirySource.PRINTED)
+        is ExpiryInput.Chosen -> ExpiryDate(input.date, ExpirySource.CHOSEN)
         ExpiryInput.None -> null
     }
 

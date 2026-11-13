@@ -25,7 +25,10 @@ import org.junit.Test
  */
 class BarcodeDeviceTest : DeviceTest() {
     private fun openScanner() {
-        rule.onNodeWithTag("scan_barcode").performClick()
+        // The scanner opens from the large button at the top of the add form.
+        rule.onNodeWithTag("add_food").performClick()
+        waitFor(hasTestTag("name_scan"))
+        rule.onNodeWithTag("name_scan").performClick()
         waitFor(hasTestTag("scan_screen"))
         // The scanner says what leaves the phone.
         rule.onNodeWithTag("scan_privacy").assertTextContains("Only the barcode number goes to Open Food Facts", substring = true)
@@ -133,7 +136,7 @@ class BarcodeDeviceTest : DeviceTest() {
         waitFor(hasTestTag("total_items") and hasText("1"))
         assertEquals("5449000000996", inventory().products.single().barcode)
         assertEquals(2, FakeServer.requests.size)
-        rule.onNodeWithTag("scan_barcode").assertIsDisplayed()
+        rule.onNodeWithTag("add_food").assertIsDisplayed()
     }
 
     private companion object {

@@ -3,6 +3,9 @@ package com.cvke.fridge
 import android.app.Application
 import android.net.Uri
 import androidx.activity.result.contract.ActivityResultContract
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
+import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import com.cvke.fridge.core.FoodTable
@@ -13,6 +16,7 @@ import com.cvke.fridge.lookup.HttpTransport
 import com.cvke.fridge.lookup.OpenFoodFactsClient
 import com.cvke.fridge.lookup.ProductLookup
 import com.cvke.fridge.lookup.ProductLookupCache
+import com.cvke.fridge.photo.CameraCaptures
 import com.cvke.fridge.photo.PhotoEncoder
 import com.cvke.fridge.photo.PhotoLoader
 import com.cvke.fridge.photo.PhotoStore
@@ -21,6 +25,8 @@ import com.cvke.fridge.reminder.ReminderAlarm
 import com.cvke.fridge.reminder.ReminderNotifier
 import com.cvke.fridge.reminder.ReminderSettingsSerializer
 import com.cvke.fridge.reminder.Reminders
+import com.cvke.fridge.settings.AppearanceSettings
+import com.cvke.fridge.settings.AppearanceSettingsSerializer
 import java.io.File
 import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
@@ -29,8 +35,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.withContext
 
 /**
- * Holds the objects that live as long as the app. The device tests use a subclass with a different [httpTransport]
- * and a different [photoPicker].
+ * Holds the objects that live as long as the app. The device tests use a subclass with a different [httpTransport],
+ * a different [photoPicker], and a different [photoCamera].
  */
 open class FridgeApplication : Application() {
     /** The change log in the private files of the app. Backup is off, so it stays on the phone. */
@@ -73,7 +79,31 @@ open class FridgeApplication : Application() {
      * The photos of the products, in the folder `photos` of the private files of the app. Backup is off, so they stay
      * on the phone.
      */
-    val photos: PhotoStore by lazy { PhotoStore(File(filesDir, "photos")) }
+    val photos: PhotoStore by lazy {
+        PhotoStore(File(filesDir, "photos"), preparedDirectory = File(cacheDir, "prepared-photos"))
+    }
+
+    /**
+     * The files into which the camera app writes a picture for a product photo, in the cache of the app. The camera
+     * app gets them through the FileProvider of the app (`res/xml/file_paths.xml`).
+     */
+    val cameraCaptures: CameraCaptures by lazy {
+        val authority = "$packageName.photos"
+        CameraCaptures(File(cacheDir, "camera"), authority, uriOf = { FileProvider.getUriForFile(this, authority, it) })
+    }
+
+    /**
+     * How the app looks, in a typed DataStore file in the private files of the app. Backup is off, so the settings
+     * stay on the phone.
+     */
+    val appearance: DataStore<AppearanceSettings> by lazy {
+        DataStoreFactory.create(
+            serializer = AppearanceSettingsSerializer,
+            corruptionHandler = ReplaceFileCorruptionHandler { AppearanceSettingsSerializer.defaultValue },
+            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+            produceFile = { File(filesDir, "appearance.json") },
+        )
+    }
 
     /** Makes a product photo from a picture that the person selected. */
     val photoEncoder: PhotoEncoder by lazy { PhotoEncoder(contentResolver) }
@@ -86,6 +116,12 @@ open class FridgeApplication : Application() {
 
     /** The source of a picture for a product photo: the photo picker of Android. */
     open fun photoPicker(): ActivityResultContract<Unit, Uri?> = PickPhoto()
+
+    /**
+     * Takes a picture for a product photo with the camera app of the phone. The input is the address of the file for
+     * the picture. The result is true when the camera app wrote the picture.
+     */
+    open fun photoCamera(): ActivityResultContract<Uri, Boolean> = ActivityResultContracts.TakePicture()
 
     /**
      * Reads the table of foods. It is the file `spec/foods.json` of the shared specification, which the build puts in

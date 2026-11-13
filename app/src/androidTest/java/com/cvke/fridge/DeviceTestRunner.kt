@@ -24,13 +24,33 @@ class DeviceTestRunner : AndroidJUnitRunner() {
 }
 
 /**
- * The app with [FakeServer] as the connection of the product lookup, and [TestPhotoPicker] as the source of a picture.
- * All other objects are the real ones.
+ * The app with [FakeServer] as the connection of the product lookup, [TestPhotoPicker] as the photo picker, and
+ * [TestPhotoCamera] as the camera app. All other objects are the real ones.
  */
 class DeviceTestApplication : FridgeApplication() {
     override fun httpTransport(): HttpTransport = FakeServer
 
     override fun photoPicker(): ActivityResultContract<Unit, Uri?> = TestPhotoPicker
+
+    override fun photoCamera(): ActivityResultContract<Uri, Boolean> = TestPhotoCamera
+}
+
+/**
+ * The camera app in the device tests. It opens no screen: it writes a picture of 1200 x 1600 pixels into the file that
+ * the app gives, through the FileProvider of the app, as a camera app does. The app then makes the photo through the
+ * production code path.
+ */
+object TestPhotoCamera : ActivityResultContract<Uri, Boolean>() {
+    override fun createIntent(context: Context, input: Uri): Intent = Intent()
+
+    override fun getSynchronousResult(context: Context, input: Uri): SynchronousResult<Boolean> {
+        val picture = createBitmap(1200, 1600).apply { eraseColor(Color.rgb(60, 120, 200)) }
+        checkNotNull(context.contentResolver.openOutputStream(input)).use { picture.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+        picture.recycle()
+        return SynchronousResult(true)
+    }
+
+    override fun parseResult(resultCode: Int, intent: Intent?): Boolean = false
 }
 
 /**

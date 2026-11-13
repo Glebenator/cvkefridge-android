@@ -48,7 +48,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -230,7 +229,7 @@ fun ScanScreen(
                     }
                     // On a wide screen the camera area goes to the bottom edge, so the snackbar keeps clear of the
                     // navigation bar there.
-                    SnackbarHost(
+                    NoticeHost(
                         snackbar,
                         Modifier
                             .align(Alignment.BottomCenter)

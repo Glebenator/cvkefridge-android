@@ -6,12 +6,12 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
@@ -21,14 +21,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SmallFloatingActionButton
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
@@ -45,10 +44,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.cvke.fridge.R
+import com.cvke.fridge.core.StorageArea
 import com.cvke.fridge.photo.ProductPhoto
 import com.cvke.fridge.inventory.InventoryAction
 import com.cvke.fridge.reminder.ReminderSettings
@@ -72,18 +73,20 @@ enum class Tab(
 
     /** The icon has no filled form. The indicator of the navigation bar shows the selection. */
     HISTORY(R.drawable.ic_history, R.drawable.ic_history, R.string.tab_history, "tab_history"),
+    SETTINGS(R.drawable.ic_settings, R.drawable.ic_settings_filled, R.string.settings, "tab_settings"),
 }
 
 /**
- * Home, My Fridge, and History: the screen of the selected tab, the Material navigation bar below it, and the two
- * buttons that add food. A tab change is instant. Each tab keeps its scroll position, and My Fridge keeps its filters,
- * its search text, and its sort order, also while another screen is above the tabs. Back on My Fridge and on History
- * goes to Home.
+ * Home, My Fridge, History, and Settings: the screen of the selected tab, and the Material navigation bar below it
+ * with the add button in its middle. A tab change is instant. Each tab keeps its scroll position, and My Fridge keeps
+ * its filters, its search text, and its sort order while another screen is above the tabs. Back on a tab other than
+ * Home goes to Home.
  *
- * The two ways to add food are each one tap: the floating action button opens the scanner, and the small floating
- * action button above it opens the form for food with no barcode. A menu would add a tap to each way. A long press on
- * a button shows its name. History does not have the two buttons: a floating action button is for the main action of
- * a screen, and on History the main action is in each entry.
+ * A tap on My Fridge in the navigation bar starts My Fridge again: the Fridge tab, with no category, no freshness, and
+ * no search text. The sort order stays, because it is a preference and not a filter.
+ *
+ * The add button is the one floating button of the tabs. It opens the form, and the form has a large "Scan a barcode"
+ * card at the top. So each way to add food starts from one button. Two floating buttons were too much for one screen.
  *
  * The filter of My Fridge is here, because Home opens My Fridge with a filter: "View all" shows all food, and the
  * number of expiring or expired batches shows the food with that freshness in all storage areas. A tap on the reminder
@@ -109,12 +112,12 @@ fun TabsScreen(
     onPerform: (InventoryAction) -> Unit,
     onTryAgain: () -> Unit,
     reminders: ReminderSettings?,
-    onOpenSettings: () -> Unit,
     onTurnOnReminders: () -> Unit,
     onDismissReminderOffer: () -> Unit,
     onPermissionAsked: () -> Unit,
     showRequest: ShowRequest?,
     onShowRequestDone: (id: Long) -> Unit,
+    settings: @Composable (insets: PaddingValues) -> Unit,
 ) {
     var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
     var filter by rememberSaveable(stateSaver = FoodFilterSaver) { mutableStateOf(FoodFilter()) }
@@ -136,35 +139,13 @@ fun TabsScreen(
 
     // The navigation bar is at the bottom edge, so the screens get the insets of the other three edges.
     val insets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal).asPaddingValues()
+    fun select(entry: Tab) {
+        if (entry == Tab.MY_FRIDGE) showMyFridge(FoodFilter(areaId = StorageArea.fridge.id)) else tab = entry
+    }
     Scaffold(
-        bottomBar = {
-            NavigationBar {
-                Tab.entries.forEach { entry ->
-                    val selected = entry == tab
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = { tab = entry },
-                        icon = { Icon(painterResource(if (selected) entry.selectedIcon else entry.icon), contentDescription = null) },
-                        modifier = Modifier.testTag(entry.tag),
-                        label = { Text(stringResource(entry.label)) },
-                    )
-                }
-            }
-        },
-        snackbarHost = { SnackbarHost(snackbar) },
-        floatingActionButton = {
-            // The buttons are there when the inventory is loaded. Before that, the form cannot save. They grow and
-            // shrink when the person goes to History and back, as the Material motion of a floating button does.
-            if (state is FridgeUiState.Ready) {
-                AnimatedVisibility(
-                    visible = tab != Tab.HISTORY,
-                    enter = scaleIn(tween(Motion.ENTER_MILLIS, easing = Motion.standard)) + fadeIn(tween(Motion.ENTER_MILLIS)),
-                    exit = scaleOut(tween(Motion.ENTER_MILLIS, easing = Motion.standard)) + fadeOut(tween(Motion.ENTER_MILLIS)),
-                ) {
-                    AddButtons(onScan = ::scan, onAddByHand = ::addFood)
-                }
-            }
-        },
+        bottomBar = { TabBar(tab, onSelect = ::select, addReady = state is FridgeUiState.Ready, onAdd = ::addFood) },
+        // The raised add button goes 20 dp above the bar, so the message keeps clear of it.
+        snackbarHost = { NoticeHost(snackbar, Modifier.padding(bottom = RAISE)) },
         containerColor = MaterialTheme.colorScheme.surface,
         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
     ) { padding ->
@@ -181,7 +162,6 @@ fun TabsScreen(
                         onOpenFood = onOpenFood,
                         onTryAgain = onTryAgain,
                         reminders = reminders,
-                        onOpenSettings = onOpenSettings,
                         onTurnOnReminders = onTurnOnReminders,
                         onDismissReminderOffer = onDismissReminderOffer,
                         onPermissionAsked = onPermissionAsked,
@@ -208,45 +188,72 @@ fun TabsScreen(
                         onTryAgain = onTryAgain,
                         insets = insets,
                     )
+                    Tab.SETTINGS -> settings(insets)
                 }
             }
         }
     }
 }
 
+/** How far the add button goes above the top edge of the navigation bar. */
+private val RAISE = 20.dp
+
 /**
- * The floating action button that opens the scanner, and the small floating action button above it that opens the
- * form. Each has a tooltip with its name.
+ * The Material navigation bar with the add button in the middle: Home and My Fridge at the start, History and
+ * Settings at the end.
+ * The add button is larger than a tab and goes above the bar, because it is the main action of the app and not a
+ * destination. Its name is below it, at the height of the names of the tabs. The button is there when the inventory
+ * is loaded. Before that, the form cannot save.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AddButtons(onScan: () -> Unit, onAddByHand: () -> Unit) {
-    val scheme = MaterialTheme.colorScheme
+private fun TabBar(tab: Tab, onSelect: (Tab) -> Unit, addReady: Boolean, onAdd: () -> Unit) {
     @Composable
-    fun WithTooltip(label: String, button: @Composable () -> Unit) {
-        TooltipBox(
-            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Start),
-            tooltip = { PlainTooltip { Text(label) } },
-            state = rememberTooltipState(),
-            content = button,
+    fun RowScope.Item(entry: Tab) {
+        val selected = entry == tab
+        NavigationBarItem(
+            selected = selected,
+            onClick = { onSelect(entry) },
+            icon = { Icon(painterResource(if (selected) entry.selectedIcon else entry.icon), contentDescription = null) },
+            modifier = Modifier.testTag(entry.tag),
+            label = { Text(stringResource(entry.label)) },
         )
     }
-    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        val byHand = stringResource(R.string.action_add_by_hand)
-        WithTooltip(byHand) {
-            SmallFloatingActionButton(
-                onClick = onAddByHand,
-                modifier = Modifier.testTag("add_food"),
-                containerColor = scheme.secondaryContainer,
-                contentColor = scheme.onSecondaryContainer,
-            ) {
-                Icon(painterResource(R.drawable.ic_pencil_plus), contentDescription = byHand)
+    val add = stringResource(R.string.action_add)
+    Box {
+        NavigationBar {
+            Item(Tab.HOME)
+            Item(Tab.MY_FRIDGE)
+            // The place of the add button. Its name is in the place of the name of a tab.
+            Box(Modifier.weight(1f).align(Alignment.Bottom), contentAlignment = Alignment.BottomCenter) {
+                Text(
+                    add,
+                    Modifier.padding(bottom = 16.dp).clearAndSetSemantics {},
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
+            Item(Tab.HISTORY)
+            Item(Tab.SETTINGS)
         }
-        val scan = stringResource(R.string.action_scan_barcode)
-        WithTooltip(scan) {
-            FloatingActionButton(onClick = onScan, Modifier.testTag("scan_barcode")) {
-                Icon(painterResource(R.drawable.ic_barcode_scan), contentDescription = scan)
+        AnimatedVisibility(
+            visible = addReady,
+            modifier = Modifier.align(Alignment.TopCenter).offset(y = -RAISE),
+            enter = scaleIn(tween(Motion.ENTER_MILLIS, easing = Motion.standard)) + fadeIn(tween(Motion.ENTER_MILLIS)),
+            exit = fadeOut(tween(Motion.EXIT_MILLIS)),
+        ) {
+            TooltipBox(
+                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                tooltip = { PlainTooltip { Text(stringResource(R.string.add_food)) } },
+                state = rememberTooltipState(),
+            ) {
+                FloatingActionButton(
+                    onClick = onAdd,
+                    modifier = Modifier.testTag("add_food"),
+                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp, pressedElevation = 2.dp),
+                ) {
+                    Icon(painterResource(R.drawable.ic_add), contentDescription = stringResource(R.string.add_food))
+                }
             }
         }
     }

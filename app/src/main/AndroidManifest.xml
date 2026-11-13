@@ -14,6 +14,14 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- The camera app takes a picture for a product photo. Android 11 and later show the app only the apps that it
+         names here. -->
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+    </queries>
+
     <application
         android:name=".FridgeApplication"
         android:allowBackup="false"
@@ -34,6 +42,20 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+            The camera app writes a picture for a product photo into a file of the cache of the app. It gets the file
+            through this provider, with a permission for that one file only.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.photos"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <!--
             The alarm of the daily reminder, and the broadcasts after which the alarm must be set again. The receiver

@@ -81,7 +81,8 @@ import java.time.LocalTime
 /**
  * Home, the first screen. Its contents are those of the Home screen of FridgeFriend (`app/(tabs)/index.tsx` in the
  * `basic_ff` repository): a greeting, a card with the totals, and the batches that need attention. The parts are
- * Material 3 components. The settings button is at the top, as in FridgeFriend. The sessions of FridgeFriend are not
+ * Material 3 components. Settings is a tab of the navigation bar, not a button at the top (ADR 0008 in the cvkefridge
+ * repository). The sessions of FridgeFriend are not
  * here: this app has no fridge device. The buttons that add food are on the tabs screen. A tap on the number of
  * expiring or expired batches calls [onShowFreshness], and My Fridge then shows the food with that freshness.
  *
@@ -102,7 +103,6 @@ fun HomeScreen(
     onOpenFood: (productId: String) -> Unit,
     onTryAgain: () -> Unit,
     reminders: ReminderSettings?,
-    onOpenSettings: () -> Unit,
     onTurnOnReminders: () -> Unit,
     onDismissReminderOffer: () -> Unit,
     onPermissionAsked: () -> Unit,
@@ -128,7 +128,7 @@ fun HomeScreen(
             Modifier
                 .widthIn(max = Size.contentMax)
                 .fillMaxWidth()
-                // The space at the bottom keeps the content clear of the two buttons that add food.
+                // The space at the bottom keeps the content clear of the add button.
                 .padding(top = insets.calculateTopPadding() + 24.dp, bottom = Size.addButtonsClearance),
         ) {
             Column(Modifier.padding(side)) {
@@ -146,13 +146,6 @@ fun HomeScreen(
                         Icon(
                             painterResource(R.drawable.ic_info),
                             contentDescription = stringResource(R.string.about),
-                            tint = scheme.onSurfaceVariant,
-                        )
-                    }
-                    IconButton(onClick = onOpenSettings, Modifier.testTag("settings_button")) {
-                        Icon(
-                            painterResource(R.drawable.ic_settings),
-                            contentDescription = stringResource(R.string.settings),
                             tint = scheme.onSurfaceVariant,
                         )
                     }

@@ -42,7 +42,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDates
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -129,7 +128,7 @@ fun SubScreen(
             )
         },
         bottomBar = bottomBar,
-        snackbarHost = { snackbar?.let { SnackbarHost(it) } },
+        snackbarHost = { snackbar?.let { NoticeHost(it) } },
         floatingActionButton = floatingActionButton,
         contentWindowInsets = WindowInsets.safeDrawing,
         content = content,
@@ -326,6 +325,7 @@ fun ExpiryField(
     val supporting = when {
         expiry?.source == ExpirySource.ESTIMATED ->
             stringResource(R.string.expiry_help_estimated, estimateHint ?: stringResource(R.string.expiry_estimate_plain))
+        expiry?.source == ExpirySource.CHOSEN -> stringResource(R.string.expiry_help_chosen)
         expiry != null -> stringResource(R.string.expiry_help_printed)
         input == ExpiryInput.None -> stringResource(R.string.expiry_help_none)
         else -> stringResource(R.string.expiry_help_no_estimate)

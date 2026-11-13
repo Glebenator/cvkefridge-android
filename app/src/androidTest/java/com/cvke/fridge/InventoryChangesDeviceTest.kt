@@ -3,6 +3,7 @@ package com.cvke.fridge
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithTag
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeRight
+import com.cvke.fridge.core.ExpiryDate
 import com.cvke.fridge.core.ExpirySource
 import com.cvke.fridge.core.Outcome
 import com.cvke.fridge.core.StorageKind
@@ -169,5 +171,26 @@ class InventoryChangesDeviceTest : DeviceTest() {
         waitFor(hasTestTag("my_fridge_screen"))
         rule.onNodeWithText("Cellar").performClick().assertIsSelected()
         rule.onNodeWithText("No items yet").assertIsDisplayed()
+    }
+
+    @Test
+    fun anExpiredFoodThatIsStillGoodGetsALaterExpiryDateWithUndo() {
+        start(SampleInventory.changes(today()))
+        rule.onNodeWithTag("tab_my_fridge").performClick()
+        rule.onNodeWithTag("food_sample-chicken/fridge").performClick()
+        waitFor(hasTestTag("food_screen"))
+        val inBatch = hasAnyAncestor(hasTestTag("batch_sample-batch-1"))
+        rule.onNode(inBatch and hasText("Expired yesterday, estimated", substring = true)).assertIsDisplayed()
+
+        // An expired batch starts from today: one more day is good until tomorrow.
+        rule.onNodeWithTag("later_expiry_1").performClick()
+        waitFor(inBatch and hasText("Expires tomorrow", substring = true))
+        assertEquals(ExpiryDate(checkNotNull(today().plusDays(1)), ExpirySource.CHOSEN), inventory().batches.single { it.id == "sample-batch-1" }.expiry)
+        // The new date is not from the package, and the screen does not say so.
+        rule.onNode(inBatch and hasText("Your date", substring = true)).assertIsDisplayed()
+
+        rule.onNodeWithText("Undo").performClick()
+        waitFor(inBatch and hasText("Expired yesterday, estimated", substring = true))
+        assertEquals(ExpirySource.ESTIMATED, inventory().batches.single { it.id == "sample-batch-1" }.expiry?.source)
     }
 }

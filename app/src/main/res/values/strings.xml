@@ -216,6 +216,7 @@
     <!-- %1$s is a date. -->
     <string name="batch_printed_date">Printed date: %1$s</string>
     <string name="batch_estimated_date">Estimated date: %1$s</string>
+    <string name="batch_chosen_date">Your date: %1$s</string>
     <string name="batch_date_added">Added %1$s</string>
     <!-- The history of one food, below its batches. -->
     <string name="food_history">History</string>
@@ -299,6 +300,7 @@
     <!-- An estimated date that the app cannot explain, for example after an edit of the batch. -->
     <string name="expiry_estimate_plain">The app suggested this date.</string>
     <string name="expiry_help_printed">Printed date, from the package.</string>
+    <string name="expiry_help_chosen">Your date: you said that the food is still good. Select the field to enter a printed date.</string>
     <string name="expiry_help_none">This batch has no expiry date. Select the field to enter the printed date.</string>
     <string name="expiry_help_no_estimate">The app has no estimate for this food here. Select the field to enter the printed date.</string>
     <!-- A food of the table of foods with the text that tells it from other foods: "Cheese, processed slices". -->
@@ -363,7 +365,20 @@
     </plurals>
 
     <!-- The photo of a product. It stays on the phone. -->
-    <string name="photo_add">Add a photo</string>
+    <string name="photo_take">Take a photo</string>
+    <string name="later_expiry_title">Still good?</string>
+    <string name="later_expiry_day">+1 day</string>
+    <string name="later_expiry_week">+1 week</string>
+    <string name="later_expiry_other">Other date</string>
+    <string name="later_expiry_day_description">Still good: expires 1 day later</string>
+    <string name="later_expiry_week_description">Still good: expires 1 week later</string>
+    <string name="later_expiry_other_description">Still good: select a new expiry date</string>
+    <string name="notice_expiry_moved">%1$s now expires on %2$s</string>
+    <string name="photo_choose">Choose a photo</string>
+    <string name="field_photo">Photo</string>
+    <string name="photo_camera_title">Take a photo with the camera</string>
+    <string name="photo_camera_body">To take a photo of the food, CVKE Fridge needs the camera. The photo stays on your phone. The app does not send it. Next, Android asks if CVKE Fridge can use the camera.</string>
+    <string name="photo_camera_blocked_body">Android does not ask again. To take a photo, open the settings of the app, select Permissions, and allow the camera. You can also choose a photo.</string>
     <string name="photo_change">Change photo</string>
     <string name="photo_remove">Remove photo</string>
     <string name="photo_adding">Adding the photo…</string>
@@ -376,6 +391,10 @@
 
     <!-- The two ways to add food: the floating buttons, the empty states, and the scanner. -->
     <string name="action_scan_barcode">Scan a barcode</string>
+    <!-- The name below the add button in the middle of the navigation bar. -->
+    <string name="action_add">Add</string>
+    <!-- The text of the large scan button at the top of the add form. -->
+    <string name="scan_card_text">The barcode fills in the form</string>
     <string name="action_add_by_hand">Add by hand</string>
 
     <!-- The scanner. -->
@@ -393,7 +412,7 @@
 
     <!-- The camera permission. The explanation comes before Android asks. -->
     <string name="camera_ask_title">Scan barcodes with the camera</string>
-    <string name="camera_ask_body">CVKE Fridge uses the camera only to read barcodes. The camera picture stays on your phone. The app does not keep it or send it.</string>
+    <string name="camera_ask_body">CVKE Fridge uses the camera to read barcodes, and to take a photo of a food when you ask. The pictures stay on your phone. The app does not send them.</string>
     <string name="camera_allow">Allow the camera</string>
     <string name="camera_denied_title">Camera access is off</string>
     <string name="camera_denied_body">To scan a barcode, allow the camera. You can also type the barcode, or add the food by hand.</string>
@@ -435,6 +454,9 @@
     <!-- The settings. The button on Home has this name for screen readers. -->
     <string name="settings">Settings</string>
     <string name="settings_reminders">Reminders</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="wallpaper_colours">Wallpaper colours</string>
+    <string name="wallpaper_colours_body">The colours of the app come from the wallpaper of your phone. Off: the green of CVKE Fridge.</string>
 
     <!-- The reminder settings. -->
     <string name="reminders_switch">Expiry reminders</string>

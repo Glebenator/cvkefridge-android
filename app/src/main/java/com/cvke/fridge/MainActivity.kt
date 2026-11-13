@@ -7,6 +7,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -35,6 +37,8 @@ class MainActivity : ComponentActivity() {
                     app.reminders,
                     app.photos,
                     app.photoEncoder,
+                    app.cameraCaptures,
+                    app.appearance,
                 )
             }
         }
@@ -49,9 +53,13 @@ class MainActivity : ComponentActivity() {
             if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) applyReminderTap(intent)
         }
         val pickPhoto = app.photoPicker()
+        val takePhoto = app.photoCamera()
         setContent {
+            // The colours wait for the small settings file, so the screen does not change its colours after the start.
+            val appearance by viewModel.appearance.collectAsStateWithLifecycle()
+            val settings = appearance ?: return@setContent
             CompositionLocalProvider(LocalPhotoLoader provides app.photoLoader) {
-                CvkeFridgeTheme { FridgeApp(viewModel, pickPhoto) }
+                CvkeFridgeTheme(wallpaperColours = settings.wallpaperColours) { FridgeApp(viewModel, pickPhoto, takePhoto) }
             }
         }
     }
