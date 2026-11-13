@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -13,6 +14,7 @@ import com.cvke.fridge.core.CalendarDate
 import com.cvke.fridge.reminder.ReminderNotifier
 import com.cvke.fridge.ui.FridgeApp
 import com.cvke.fridge.ui.FridgeViewModel
+import com.cvke.fridge.ui.LocalPhotoLoader
 import com.cvke.fridge.ui.theme.CvkeFridgeTheme
 import java.util.TimeZone
 import kotlinx.coroutines.launch
@@ -23,7 +25,18 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: FridgeViewModel by viewModels {
         viewModelFactory {
-            initializer { FridgeViewModel(changeLog, app.phoneId, app::readFoodTable, ::today, app.productLookup, app.reminders) }
+            initializer {
+                FridgeViewModel(
+                    changeLog,
+                    app.phoneId,
+                    app::readFoodTable,
+                    ::today,
+                    app.productLookup,
+                    app.reminders,
+                    app.photos,
+                    app.photoEncoder,
+                )
+            }
         }
     }
 
@@ -35,8 +48,11 @@ class MainActivity : ComponentActivity() {
             // A start from the list of recent apps gives the first intent again. It is not a new tap on the reminder.
             if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) applyReminderTap(intent)
         }
+        val pickPhoto = app.photoPicker()
         setContent {
-            CvkeFridgeTheme { FridgeApp(viewModel) }
+            CompositionLocalProvider(LocalPhotoLoader provides app.photoLoader) {
+                CvkeFridgeTheme { FridgeApp(viewModel, pickPhoto) }
+            }
         }
     }
 

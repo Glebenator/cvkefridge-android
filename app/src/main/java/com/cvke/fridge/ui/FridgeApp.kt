@@ -1,5 +1,7 @@
 package com.cvke.fridge.ui
 
+import android.net.Uri
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -27,7 +29,6 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.cvke.fridge.R
 import com.cvke.fridge.core.Outcome
-import com.cvke.fridge.inventory.InventoryAction
 import com.cvke.fridge.inventory.NoticeMessage
 import com.cvke.fridge.reminder.TestReminderResult
 import com.cvke.fridge.ui.theme.Motion
@@ -44,17 +45,21 @@ import com.cvke.fridge.ui.theme.Motion
  * expired food, also when the app is open.
  *
  * The screens get the state of the view model and call it for each action. No screen keeps a copy of the inventory.
+ *
+ * @param pickPhoto Opens the source of a picture for a product photo. The device tests give a source with no screen.
  */
 @Composable
-fun FridgeApp(viewModel: FridgeViewModel) {
+fun FridgeApp(viewModel: FridgeViewModel, pickPhoto: ActivityResultContract<Unit, Uri?>) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val formWrite by viewModel.formWrite.collectAsStateWithLifecycle()
     val notice by viewModel.notice.collectAsStateWithLifecycle()
     val lookup by viewModel.lookup.collectAsStateWithLifecycle()
     val reminders by viewModel.reminderSettings.collectAsStateWithLifecycle()
     val showRequest by viewModel.showRequest.collectAsStateWithLifecycle()
+    val photos by viewModel.photos.collectAsStateWithLifecycle()
+    val photoImports by viewModel.photoImports.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
-    NoticeSnackbar(notice, snackbar, onAction = viewModel::perform, onShown = viewModel::noticeShown)
+    NoticeSnackbar(notice, snackbar, onAction = viewModel::noticeAction, onShown = viewModel::noticeShown)
 
     val backStack = rememberNavBackStack(Screen.Tabs)
     fun open(screen: Screen) {
@@ -141,6 +146,11 @@ fun FridgeApp(viewModel: FridgeViewModel) {
                 FoodDetailScreen(
                     screen = screen,
                     state = state,
+                    photo = photos[screen.productId],
+                    addingPhoto = screen.productId in photoImports,
+                    pickPhoto = pickPhoto,
+                    onPhotoPicked = { viewModel.setPhoto(screen.productId, it) },
+                    onRemovePhoto = { viewModel.removePhoto(screen.productId) },
                     snackbar = snackbar,
                     onEditProduct = { open(Screen.EditProduct(screen.productId)) },
                     onEditBatch = { open(Screen.EditBatch(it)) },
@@ -222,18 +232,17 @@ private fun screenChange(towardsEnd: Boolean): ContentTransform {
  * screen.
  */
 @Composable
-private fun NoticeSnackbar(notice: Notice?, snackbar: SnackbarHostState, onAction: (InventoryAction) -> Unit, onShown: (Long) -> Unit) {
+private fun NoticeSnackbar(notice: Notice?, snackbar: SnackbarHostState, onAction: (Notice) -> Unit, onShown: (Long) -> Unit) {
     val text = notice?.let { noticeText(it.message) }
-    val action = notice?.undo ?: notice?.retry
     val label = when {
-        notice?.undo != null -> stringResource(R.string.action_undo)
+        notice?.undo != null || notice?.restorePhoto != null -> stringResource(R.string.action_undo)
         notice?.retry != null -> stringResource(R.string.action_try_again)
         else -> null
     }
     LaunchedEffect(notice?.id) {
         if (notice == null || text == null) return@LaunchedEffect
         val result = snackbar.showSnackbar(text, label, duration = if (label == null) SnackbarDuration.Short else SnackbarDuration.Long)
-        if (result == SnackbarResult.ActionPerformed && action != null) onAction(action)
+        if (result == SnackbarResult.ActionPerformed) onAction(notice)
         onShown(notice.id)
     }
 }
@@ -254,6 +263,9 @@ private fun noticeText(message: NoticeMessage): String = when (message) {
     NoticeMessage.RemindersOn -> stringResource(R.string.reminders_on)
     NoticeMessage.RemindersInSettings -> stringResource(R.string.reminders_in_settings)
     NoticeMessage.SettingsNotSaved -> stringResource(R.string.settings_not_saved)
+    NoticeMessage.PhotoRemoved -> stringResource(R.string.notice_photo_removed)
+    NoticeMessage.PhotoFailed -> stringResource(R.string.notice_photo_failed)
+    NoticeMessage.PhotoNotRemoved -> stringResource(R.string.notice_photo_not_removed)
     is NoticeMessage.TestReminder -> stringResource(
         when (message.result) {
             TestReminderResult.SENT -> R.string.test_reminder_sent

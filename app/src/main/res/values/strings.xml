@@ -362,6 +362,15 @@
         <item quantity="other">%1$d batches of %2$s deleted</item>
     </plurals>
 
+    <!-- The photo of a product. It stays on the phone. -->
+    <string name="photo_add">Add a photo</string>
+    <string name="photo_change">Change photo</string>
+    <string name="photo_remove">Remove photo</string>
+    <string name="photo_adding">Adding the photo…</string>
+    <string name="notice_photo_removed">Photo removed</string>
+    <string name="notice_photo_failed">Couldn\'t add the photo. Select a different picture.</string>
+    <string name="notice_photo_not_removed">Couldn\'t remove the photo. Try again.</string>
+
     <!-- The sample of the debug build. -->
     <string name="sample_note">Sample data</string>
 

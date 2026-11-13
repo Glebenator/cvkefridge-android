@@ -1,7 +1,12 @@
 package com.cvke.fridge.ui
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContract
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -9,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -29,6 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -40,13 +47,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
 import com.cvke.fridge.R
 import com.cvke.fridge.core.CalendarDate
 import com.cvke.fridge.core.ExpirySource
@@ -56,6 +68,8 @@ import com.cvke.fridge.history.HistoryContent
 import com.cvke.fridge.history.HistoryLine
 import com.cvke.fridge.inventory.InventoryAction
 import com.cvke.fridge.inventory.TakeRequest
+import com.cvke.fridge.photo.ProductPhoto
+import com.cvke.fridge.ui.theme.BrandSpinner
 import com.cvke.fridge.ui.theme.IconTile
 import com.cvke.fridge.ui.theme.Size
 
@@ -76,12 +90,25 @@ import com.cvke.fridge.ui.theme.Size
  * Below the batches, the history of the food shows what was used and what was thrown away, the newest first, with the
  * totals. It shows the first entries, and "Show all" shows the others.
  *
+ * The product can have a photo. "Add a photo" opens the photo picker of Android, which needs no permission. The photo
+ * is at the top of the screen, with "Change photo" and "Remove photo". The person can undo a remove. The photo is
+ * decorative, because the name of the food is below it.
+ *
  * When the product is not in the inventory, for example after a delete, the screen closes.
+ *
+ * @param photo The photo of the product, or null.
+ * @param addingPhoto True while the app makes the photo from the picture that the person selected.
+ * @param pickPhoto Opens the source of a picture.
  */
 @Composable
 fun FoodDetailScreen(
     screen: Screen.Food,
     state: FridgeUiState,
+    photo: ProductPhoto?,
+    addingPhoto: Boolean,
+    pickPhoto: ActivityResultContract<Unit, Uri?>,
+    onPhotoPicked: (Uri) -> Unit,
+    onRemovePhoto: () -> Unit,
     snackbar: SnackbarHostState,
     onEditProduct: () -> Unit,
     onEditBatch: (batchId: String) -> Unit,
@@ -102,6 +129,10 @@ fun FoodDetailScreen(
     }
     val today = ready?.today
     var allHistory by rememberSaveable { mutableStateOf(false) }
+
+    // The picker gives its result also after Android stopped the app while the picker was open.
+    val picker = rememberLauncherForActivityResult(pickPhoto) { uri -> if (uri != null) onPhotoPicked(uri) }
+    val choosePhoto = { picker.launch(Unit) }
 
     var taking by rememberSaveable(stateSaver = TakeRequestSaver) { mutableStateOf(null) }
     taking?.let { request -> if (ready != null) TakeDialog(request, ready.inventory, onPerform, onDismiss = { taking = null }) }
@@ -131,7 +162,16 @@ fun FoodDetailScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                item(key = "product") { ProductHeader(detail, Modifier.padding(bottom = 8.dp)) }
+                val hasPhoto = photo != null || addingPhoto
+                if (hasPhoto) item(key = "photo") { FoodPhoto(photo, addingPhoto, onChange = choosePhoto, onRemove = onRemovePhoto) }
+                item(key = "product") {
+                    ProductHeader(
+                        detail,
+                        showIcon = !hasPhoto,
+                        onAddPhoto = if (hasPhoto) null else choosePhoto,
+                        Modifier.padding(bottom = 8.dp),
+                    )
+                }
                 if (detail.batches.isEmpty()) {
                     // The core keeps a product when its batches end. "Add again" adds a batch to it.
                     item(key = "none") {
@@ -194,30 +234,102 @@ fun FoodDetailScreen(
     }
 }
 
-/** The product: the icon of its category, its name in full, and its category with the sum of its batches. */
+/**
+ * The product: the icon of its category, its name in full, and its category with the sum of its batches. A product
+ * with a photo shows the photo above, in the place of the icon. A product with no photo has "Add a photo" below.
+ */
 @Composable
-private fun ProductHeader(detail: FoodDetail, modifier: Modifier = Modifier) {
+private fun ProductHeader(detail: FoodDetail, showIcon: Boolean, onAddPhoto: (() -> Unit)?, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     val product = detail.product
-    Row(
-        modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.testTag("food_header"),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconTile(product.category.icon(), scheme.secondaryContainer, scheme.onSecondaryContainer, size = 56.dp)
-        Column {
-            Text(product.name, Modifier.semantics { heading() }, color = scheme.onSurface, style = MaterialTheme.typography.titleLarge)
-            val category = stringResource(product.category.label())
-            Text(
-                if (detail.batches.isEmpty()) {
-                    category
-                } else {
-                    "$category ${stringResource(R.string.meta_separator)} ${quantityText(detail.total, product.unit)}"
-                },
-                color = scheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyLarge,
-            )
+    Column(modifier) {
+        Row(
+            Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.testTag("food_header"),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (showIcon) IconTile(product.category.icon(), scheme.secondaryContainer, scheme.onSecondaryContainer, size = 56.dp)
+            ProductNames(detail)
         }
+        if (onAddPhoto != null) {
+            TextButton(onAddPhoto, Modifier.padding(top = 8.dp).testTag("photo_add"), contentPadding = ButtonDefaults.TextButtonWithIconContentPadding) {
+                Icon(painterResource(R.drawable.ic_image_plus), contentDescription = null, Modifier.size(ButtonDefaults.IconSize))
+                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                Text(stringResource(R.string.photo_add))
+            }
+        }
+    }
+}
+
+/**
+ * The photo of the product, cropped to the width of the screen and not higher than 280 dp or 40% of the window, with
+ * "Change photo" and "Remove photo". While the app makes a new photo, the screen says so, and screen readers hear it.
+ */
+@Composable
+private fun FoodPhoto(photo: ProductPhoto?, adding: Boolean, onChange: () -> Unit, onRemove: () -> Unit, modifier: Modifier = Modifier) {
+    val scheme = MaterialTheme.colorScheme
+    Column(modifier.fillMaxWidth()) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            // On a phone on its side, the photo leaves space for the name and the batches.
+            val windowHeight = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() }
+            val height = min(min(maxWidth * 0.75f, 280.dp), windowHeight * 0.4f)
+            Box(Modifier.fillMaxWidth().height(height), contentAlignment = Alignment.Center) {
+                if (photo != null) {
+                    ProductPhotoImage(photo, MaterialTheme.shapes.large, scheme.surfaceContainerHigh, Modifier.fillMaxSize().testTag("food_photo"))
+                } else {
+                    Box(Modifier.fillMaxSize().background(scheme.surfaceContainerHigh, MaterialTheme.shapes.large))
+                }
+                if (adding) {
+                    Surface(shape = MaterialTheme.shapes.large, color = scheme.surfaceContainerHighest) {
+                        Row(
+                            Modifier
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                                .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }
+                                .testTag("photo_adding"),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            BrandSpinner()
+                            Text(stringResource(R.string.photo_adding), color = scheme.onSurface, style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+            }
+        }
+        if (!adding) {
+            FlowRow(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onChange, Modifier.testTag("photo_change"), contentPadding = ButtonDefaults.TextButtonWithIconContentPadding) {
+                    Icon(painterResource(R.drawable.ic_image_edit), contentDescription = null, Modifier.size(ButtonDefaults.IconSize))
+                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                    Text(stringResource(R.string.photo_change))
+                }
+                TextButton(onRemove, Modifier.testTag("photo_remove"), contentPadding = ButtonDefaults.TextButtonWithIconContentPadding) {
+                    Icon(painterResource(R.drawable.ic_image_remove), contentDescription = null, Modifier.size(ButtonDefaults.IconSize))
+                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                    Text(stringResource(R.string.photo_remove))
+                }
+            }
+        }
+    }
+}
+
+/** The name of the product in full, and its category with the sum of its batches. */
+@Composable
+private fun ProductNames(detail: FoodDetail) {
+    val scheme = MaterialTheme.colorScheme
+    val product = detail.product
+    Column {
+        Text(product.name, Modifier.semantics { heading() }, color = scheme.onSurface, style = MaterialTheme.typography.titleLarge)
+        val category = stringResource(product.category.label())
+        Text(
+            if (detail.batches.isEmpty()) {
+                category
+            } else {
+                "$category ${stringResource(R.string.meta_separator)} ${quantityText(detail.total, product.unit)}"
+            },
+            color = scheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyLarge,
+        )
     }
 }
 

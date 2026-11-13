@@ -100,6 +100,15 @@ sealed interface NoticeMessage {
     /** The reminder settings could not be written. */
     data object SettingsNotSaved : NoticeMessage
 
+    /** The person removed the photo of a product. */
+    data object PhotoRemoved : NoticeMessage
+
+    /** The picture that the person selected could not become a photo. */
+    data object PhotoFailed : NoticeMessage
+
+    /** The photo file could not be removed. */
+    data object PhotoNotRemoved : NoticeMessage
+
     /** The result of the test reminder of the debug build. */
     data class TestReminder(val result: TestReminderResult) : NoticeMessage
 }

@@ -1,5 +1,6 @@
 package com.cvke.fridge.ui
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cvke.fridge.core.CalendarDate
@@ -23,6 +24,10 @@ import com.cvke.fridge.lookup.ProductLookup
 import com.cvke.fridge.lookup.ScanSource
 import com.cvke.fridge.lookup.Scanned
 import com.cvke.fridge.lookup.ScannedFoods
+import com.cvke.fridge.photo.PhotoEncoder
+import com.cvke.fridge.photo.PhotoStore
+import com.cvke.fridge.photo.ProductPhoto
+import com.cvke.fridge.photo.RemovedPhoto
 import com.cvke.fridge.reminder.ReminderSettings
 import com.cvke.fridge.reminder.Reminders
 import java.io.IOException
@@ -74,8 +79,15 @@ sealed interface FridgeUiState {
  * @property id A number that is different for each message.
  * @property undo The action that undoes the action of the message, or null.
  * @property retry The action to do again after a failed write, or null.
+ * @property restorePhoto The photo that "Undo" brings back, or null.
  */
-data class Notice(val id: Long, val message: NoticeMessage, val undo: InventoryAction.Undo? = null, val retry: InventoryAction? = null)
+data class Notice(
+    val id: Long,
+    val message: NoticeMessage,
+    val undo: InventoryAction.Undo? = null,
+    val retry: InventoryAction? = null,
+    val restorePhoto: RemovedPhoto? = null,
+)
 
 /** The state of the product lookup of the scanner. */
 sealed interface LookupState {
@@ -123,10 +135,16 @@ sealed interface FormWrite {
  * The view model also does the product lookup of the scanner. It runs in the scope of the view model, so it continues
  * when the screen turns, and [cancelLookup] stops it when the scanner closes.
  *
+ * The photos of the products are not in the change log: the core has no photo yet. [photoStore] keeps them in the
+ * private files of the app. A photo of a deleted product, and a removed photo, stay while the message with "Undo" is
+ * on the screen. When the message closes, and at the start, the store deletes the photos that no product needs.
+ *
  * @param readFoods Reads the table of foods.
  * @param today The date in the time zone of the device.
  * @param productLookup The product lookup with its cache on the phone.
  * @param reminders The daily reminder: its settings, its alarm, and the notification.
+ * @param photoStore The photos of the products.
+ * @param photoEncoder Makes a photo from a picture that the person selected.
  * @param now The instant of now, in milliseconds from 1970-01-01T00:00:00Z.
  * @param newId Makes a random identifier for a product, a batch, a storage area, or a change.
  */
@@ -137,6 +155,8 @@ class FridgeViewModel(
     private val today: () -> CalendarDate,
     private val productLookup: ProductLookup,
     private val reminders: Reminders,
+    private val photoStore: PhotoStore,
+    private val photoEncoder: PhotoEncoder,
     private val now: () -> Long = System::currentTimeMillis,
     private val newId: () -> String = { UUID.randomUUID().toString() },
     private val work: CoroutineDispatcher = Dispatchers.Default,
@@ -166,6 +186,14 @@ class FridgeViewModel(
     val showRequest: StateFlow<ShowRequest?> = _showRequest.asStateFlow()
     private var showCount = 0L
 
+    /** The photo of each product that has one. */
+    val photos: StateFlow<Map<String, ProductPhoto>> = photoStore.photos
+
+    private val _photoImports = MutableStateFlow<Set<String>>(emptySet())
+
+    /** The products that get a new photo now. */
+    val photoImports: StateFlow<Set<String>> = _photoImports.asStateFlow()
+
     /** What the last read or write gave. One read or write runs at a time. */
     private class Loaded(val changes: List<Change>, val inventory: Inventory, val foods: FoodTable, val origin: String)
 
@@ -177,6 +205,13 @@ class FridgeViewModel(
     private var noticeCount = 0L
 
     init {
+        viewModelScope.launch {
+            try {
+                photoStore.read()
+            } catch (_: IOException) {
+                // The screens show the category icons.
+            }
+        }
         load()
         // Sets the alarm again. Android removes it when the person stops the app in its settings.
         reminderAction { reminders.restore() }
@@ -199,6 +234,8 @@ class FridgeViewModel(
                     }
                     val table = known ?: readFoods().also { foods = it }
                     inventoryChanged(inventory)
+                    // No message with "Undo" can bring back a product of an earlier log.
+                    cleanPhotos(inventory)
                     ready(Loaded(changes, inventory, table, origin).also { loaded = it })
                 } catch (_: IOException) {
                     FridgeUiState.LoadFailed
@@ -244,8 +281,73 @@ class FridgeViewModel(
         }
     }
 
-    /** The snackbar closed the message. */
-    fun noticeShown(id: Long) = _notice.update { if (it?.id == id) null else it }
+    /**
+     * The snackbar closed the message. After that, "Undo" cannot bring back a deleted product or a removed photo, so
+     * the photos that no product needs go.
+     */
+    fun noticeShown(id: Long) {
+        _notice.update { if (it?.id == id) null else it }
+        viewModelScope.launch {
+            // The lock lets an undo of the message write first.
+            val inventory = mutex.withLock { loaded?.inventory } ?: return@launch
+            cleanPhotos(inventory)
+        }
+    }
+
+    /** The person selected the button of the message: "Undo" or "Try again". */
+    fun noticeAction(notice: Notice) {
+        notice.undo?.let(::perform)
+        notice.retry?.let(::perform)
+        notice.restorePhoto?.let { removed -> viewModelScope.launch { photoStore.restore(removed) } }
+    }
+
+    /**
+     * Makes the photo of the product from the picture at [uri], off the main thread, and replaces the photo that the
+     * product had. The app reads the picture now and does not keep its address. A picture that cannot be read gives a
+     * message, and the photo of the product stays.
+     */
+    fun setPhoto(productId: String, uri: Uri) {
+        _photoImports.update { it + productId }
+        viewModelScope.launch {
+            val failed = try {
+                photoStore.save(productId) { out -> photoEncoder.encode(uri, out) }
+                false
+            } catch (_: IOException) {
+                true
+            } catch (_: SecurityException) {
+                true
+            } catch (_: IllegalArgumentException) {
+                true
+            } finally {
+                _photoImports.update { it - productId }
+            }
+            if (failed) _notice.value = Notice(++noticeCount, NoticeMessage.PhotoFailed)
+        }
+    }
+
+    /** Removes the photo of the product. The message has "Undo". */
+    fun removePhoto(productId: String) {
+        viewModelScope.launch {
+            _notice.value = try {
+                val removed = photoStore.remove(productId) ?: return@launch
+                Notice(++noticeCount, NoticeMessage.PhotoRemoved, restorePhoto = removed)
+            } catch (_: IOException) {
+                Notice(++noticeCount, NoticeMessage.PhotoNotRemoved)
+            }
+        }
+    }
+
+    /** Deletes the photos of the products that are not in the [inventory], and the files that no photo needs. */
+    private fun cleanPhotos(inventory: Inventory) {
+        val products = inventory.products.mapTo(HashSet()) { it.id }
+        viewModelScope.launch {
+            try {
+                photoStore.clean(products)
+            } catch (_: IOException) {
+                // The next cleanup tries again.
+            }
+        }
+    }
 
     /**
      * Finds the product of a scanned or typed [barcode], in the form of [com.cvke.fridge.lookup.Barcodes]. A product
