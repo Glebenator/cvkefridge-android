@@ -9,11 +9,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -195,18 +197,24 @@ fun dayText(date: CalendarDate, name: DayName): String = when (name) {
     DayName.DATE -> longDateText(date)
 }
 
-/** Sums in more than one unit, for example "3.5 l • 12 pcs • 2 with no unit". */
+/**
+ * Sums in more than one unit, for example "3.5 l • 12 pcs • 2 with no unit". A line breaks only between two sums, so
+ * that a number stays with its unit.
+ */
 @Composable
 fun totalsText(totals: List<QuantityTotal>): String {
     val separator = stringResource(R.string.meta_separator)
     return totals.map { total ->
-        if (total.unit == null) {
+        val text = if (total.unit == null) {
             stringResource(R.string.history_total_no_unit, quantityText(total.quantity, null))
         } else {
             quantityText(total.quantity, total.unit)
         }
+        text.replace(' ', NO_BREAK_SPACE)
     }.joinToString(" $separator ")
 }
+
+private const val NO_BREAK_SPACE = ' '
 
 /** The icon of an outcome, the same as on the buttons and the swipe of a card. */
 @DrawableRes
@@ -405,13 +413,16 @@ private fun PeriodButton(period: HistoryPeriod, onChange: (HistoryPeriod) -> Uni
 @Composable
 private fun FilterButtons(filter: HistoryFilter, onSelect: (HistoryFilter) -> Unit, modifier: Modifier = Modifier) {
     Surface(color = MaterialTheme.colorScheme.surface) {
-        SingleChoiceSegmentedButtonRow(modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp).testTag("history_filter")) {
+        SingleChoiceSegmentedButtonRow(
+            modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp).height(IntrinsicSize.Min).testTag("history_filter"),
+        ) {
             HistoryFilter.entries.forEachIndexed { index, option ->
                 SegmentedButton(
                     selected = option == filter,
                     onClick = { onSelect(option) },
                     shape = SegmentedButtonDefaults.itemShape(index, HistoryFilter.entries.size),
-                    modifier = Modifier.testTag("history_filter_${option.name.lowercase()}"),
+                    // With large text, a label can have two lines. The three buttons then have the same height.
+                    modifier = Modifier.fillMaxHeight().testTag("history_filter_${option.name.lowercase()}"),
                     label = { Text(stringResource(option.label()), textAlign = TextAlign.Center) },
                 )
             }
