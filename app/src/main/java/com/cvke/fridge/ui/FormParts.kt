@@ -408,6 +408,15 @@ fun dateText(date: CalendarDate): String {
     }
 }
 
+/** A date in the full format of the locale, with the day of the week, for example "Thursday, 12 November 2026". */
+@Composable
+fun longDateText(date: CalendarDate): String {
+    val locale = LocalConfiguration.current.locales[0]
+    return remember(date, locale) {
+        DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(locale).format(LocalDate.of(date.year, date.month, date.day))
+    }
+}
+
 /** Where an estimate comes from: "Estimate for Milk (Fridge): 7 days". It is null when the food has no days for the kind. */
 @Composable
 fun estimateHint(food: Food?, kind: StorageKind?): String? {

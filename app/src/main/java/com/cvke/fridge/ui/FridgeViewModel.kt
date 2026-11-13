@@ -11,6 +11,7 @@ import com.cvke.fridge.core.Inventory
 import com.cvke.fridge.core.RejectionReason
 import com.cvke.fridge.data.ChangeLogStore
 import com.cvke.fridge.data.PhoneId
+import com.cvke.fridge.history.HistoryContent
 import com.cvke.fridge.inventory.InventoryAction
 import com.cvke.fridge.inventory.InventoryActions
 import com.cvke.fridge.inventory.NewChanges
@@ -52,12 +53,14 @@ sealed interface FridgeUiState {
      * The inventory, for the date [today].
      *
      * @property content What Home and My Fridge show.
+     * @property history What History shows, and the history of each product.
      * @property inventory The replay of the change log. The other screens and the forms read it.
      * @property foods The table of foods. It is empty for a short time after the start, while the app reads it.
      * @property lastAreaId The storage area of the last batch that this phone added, or null.
      */
     data class Ready(
         val content: InventoryContent,
+        val history: HistoryContent,
         val today: CalendarDate,
         val inventory: Inventory,
         val foods: FoodTable,
@@ -384,6 +387,9 @@ class FridgeViewModel(
             .maxWithOrNull(compareBy<Change> { it.at }.thenBy { it.id })
         FridgeUiState.Ready(
             content = InventoryContent.of(loaded.inventory, date, sample),
+            // The list and the summaries are ready before the person opens History, so a long history does not make
+            // the screen wait. The calculation is off the main thread.
+            history = HistoryContent.of(loaded.inventory, date),
             today = date,
             inventory = loaded.inventory,
             foods = loaded.foods,

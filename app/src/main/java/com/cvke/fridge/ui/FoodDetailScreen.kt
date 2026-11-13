@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,8 +46,12 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.cvke.fridge.R
+import com.cvke.fridge.core.CalendarDate
 import com.cvke.fridge.core.ExpirySource
 import com.cvke.fridge.core.Outcome
+import com.cvke.fridge.history.DayName
+import com.cvke.fridge.history.HistoryContent
+import com.cvke.fridge.history.HistoryLine
 import com.cvke.fridge.inventory.InventoryAction
 import com.cvke.fridge.inventory.TakeRequest
 import com.cvke.fridge.ui.theme.IconTile
@@ -61,6 +67,9 @@ import com.cvke.fridge.ui.theme.Size
  * batch first. The menu of a batch has the same two actions for that batch, "Edit", and "Delete batch". "Delete food"
  * is only in the menu of the top app bar, because a delete is for a mistake. The person can undo each of these
  * actions from the snackbar.
+ *
+ * Below the batches, the history of the food shows what was used and what was thrown away, the newest first, with the
+ * totals. It shows the first entries, and "Show all" shows the others.
  *
  * When the product is not in the inventory, for example after a delete, the screen closes.
  */
@@ -81,6 +90,13 @@ fun FoodDetailScreen(
         ready?.let { FoodDetail.of(it.inventory, screen.productId, it.today) }
     }
     if (ready != null && detail == null) LaunchedEffect(Unit) { onBack() }
+
+    // The history of the product, the newest first. The history of the app is calculated off the main thread.
+    val history = remember(ready?.history, screen.productId) {
+        ready?.history?.lines?.filter { it.productId == screen.productId }.orEmpty()
+    }
+    val today = ready?.today
+    var allHistory by rememberSaveable { mutableStateOf(false) }
 
     var taking by rememberSaveable(stateSaver = TakeRequestSaver) { mutableStateOf(null) }
     taking?.let { request -> if (ready != null) TakeDialog(request, ready.inventory, onPerform, onDismiss = { taking = null }) }
@@ -147,6 +163,18 @@ fun FoodDetailScreen(
                         Text(stringResource(R.string.food_add_batch))
                     }
                 }
+                if (history.isNotEmpty()) {
+                    item(key = "history") { FoodHistoryHeader(history, Modifier.padding(top = 16.dp)) }
+                    val shown = if (allHistory) history else history.take(FOOD_HISTORY_COUNT)
+                    items(shown, key = { "history_${it.changeId}" }) { line -> FoodHistoryLine(line, today) }
+                    if (shown.size < history.size) {
+                        item(key = "history_all") {
+                            TextButton(onClick = { allHistory = true }, Modifier.testTag("food_history_all")) {
+                                Text(pluralStringResource(R.plurals.food_history_show_all, history.size, history.size))
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -196,6 +224,78 @@ private fun TakeButtons(onUsed: () -> Unit, onThrownAway: () -> Unit, modifier: 
             Icon(painterResource(R.drawable.ic_trash), contentDescription = null, Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.action_thrown_away))
+        }
+    }
+}
+
+/** The number of entries that the history of a food shows before the person selects "Show all". */
+private const val FOOD_HISTORY_COUNT = 5
+
+/**
+ * The start of the history of the food: the heading, and for each outcome the quantity and the number of batches, for
+ * example "Used: 3 l from 2 batches".
+ */
+@Composable
+private fun FoodHistoryHeader(lines: List<HistoryLine>, modifier: Modifier = Modifier) {
+    val scheme = MaterialTheme.colorScheme
+    val used = remember(lines) { HistoryContent.total(lines, Outcome.USED) }
+    val thrownAway = remember(lines) { HistoryContent.total(lines, Outcome.THROWN_AWAY) }
+    Column(modifier.fillMaxWidth().testTag("food_history"), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            stringResource(R.string.food_history),
+            Modifier.semantics { heading() },
+            color = scheme.onSurface,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        if (used.batchCount > 0) {
+            Text(
+                pluralStringResource(R.plurals.food_history_used, used.batchCount, totalsText(used.quantities), used.batchCount),
+                color = scheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        if (thrownAway.batchCount > 0) {
+            Text(
+                pluralStringResource(
+                    R.plurals.food_history_thrown_away,
+                    thrownAway.batchCount,
+                    totalsText(thrownAway.quantities),
+                    thrownAway.batchCount,
+                ),
+                color = scheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+    }
+}
+
+/** One entry of the history of the food: the outcome in words with its icon, the quantity, and the day. */
+@Composable
+private fun FoodHistoryLine(line: HistoryLine, today: CalendarDate?, modifier: Modifier = Modifier) {
+    val scheme = MaterialTheme.colorScheme
+    val outcome = stringResource(if (line.outcome == Outcome.USED) R.string.action_used else R.string.action_thrown_away)
+    val name = today?.let { HistoryContent.dayName(line.date, it) } ?: DayName.DATE
+    Row(
+        modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .semantics(mergeDescendants = true) {}
+            .testTag("food_history_${line.changeId}"),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(painterResource(line.outcome.icon()), contentDescription = null, Modifier.padding(start = 8.dp), tint = outcomeColor(line.outcome))
+        Column {
+            Text(
+                "$outcome ${stringResource(R.string.meta_separator)} ${quantityText(line.quantity, line.unit)}",
+                color = scheme.onSurface,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                if (name == DayName.DATE) dateText(line.date) else dayText(line.date, name),
+                color = scheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
     }
 }

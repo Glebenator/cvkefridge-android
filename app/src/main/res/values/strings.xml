@@ -6,6 +6,7 @@
     <!-- Tabs -->
     <string name="tab_home">Home</string>
     <string name="tab_my_fridge">My Fridge</string>
+    <string name="tab_history">History</string>
 
     <!-- Home -->
     <string name="greeting_morning">Good morning</string>
@@ -78,6 +79,47 @@
         <item quantity="one">%1$d expiry date</item>
         <item quantity="other">%1$d expiry dates</item>
     </plurals>
+
+    <!-- History: what was used and what was thrown away. -->
+    <string name="history_title">History</string>
+    <string name="history_filter_all">All</string>
+    <string name="history_filter_used">Used</string>
+    <string name="history_filter_thrown_away">Thrown away</string>
+    <!-- The headers of the days. The other days show the date. -->
+    <string name="history_today">Today</string>
+    <string name="history_yesterday">Yesterday</string>
+    <string name="history_empty">Nothing used or thrown away yet</string>
+    <string name="history_empty_body">When you record food as used or as thrown away, it shows here.</string>
+    <!-- The filter shows one outcome, and the history has no entry with it. -->
+    <string name="history_none_used">Nothing used yet</string>
+    <string name="history_none_thrown_away">Nothing thrown away yet</string>
+    <!-- For screen readers: one entry. %1$s is the name of the food, %2$s the quantity, %3$s "Used" or "Thrown away",
+         %4$s the day: "Whole milk, 1 l, Used, Today". -->
+    <string name="history_entry_description">%1$s, %2$s, %3$s, %4$s</string>
+    <!-- The summary at the top of History. -->
+    <string name="history_summary_title">Used and thrown away</string>
+    <string name="history_period_this_month">This month</string>
+    <string name="history_period_last_month">Last month</string>
+    <string name="history_period_all">All time</string>
+    <!-- For screen readers: the button that changes the period of the summary. %1$s is the period. -->
+    <string name="history_period_description">Period: %1$s</string>
+    <string name="history_summary_none">Nothing was used or thrown away in this time.</string>
+    <!-- Below the number of batches in the summary. -->
+    <plurals name="history_batches_used">
+        <item quantity="one">batch used</item>
+        <item quantity="other">batches used</item>
+    </plurals>
+    <plurals name="history_batches_thrown_away">
+        <item quantity="one">batch thrown away</item>
+        <item quantity="other">batches thrown away</item>
+    </plurals>
+    <string name="history_most_thrown_away">Thrown away most often</string>
+    <plurals name="history_batch_count">
+        <item quantity="one">%1$d batch</item>
+        <item quantity="other">%1$d batches</item>
+    </plurals>
+    <!-- A sum of the quantities of foods that have no unit. %1$s is a number. -->
+    <string name="history_total_no_unit">%1$s with no unit</string>
 
     <!-- The sort control -->
     <string name="sort_name">Name</string>
@@ -169,6 +211,22 @@
     <string name="batch_printed_date">Printed date: %1$s</string>
     <string name="batch_estimated_date">Estimated date: %1$s</string>
     <string name="batch_date_added">Added %1$s</string>
+    <!-- The history of one food, below its batches. -->
+    <string name="food_history">History</string>
+    <!-- %1$s is a quantity with its unit, %2$d the number of batches: "Used: 3 l from 2 batches". -->
+    <plurals name="food_history_used">
+        <item quantity="one">Used: %1$s from %2$d batch</item>
+        <item quantity="other">Used: %1$s from %2$d batches</item>
+    </plurals>
+    <plurals name="food_history_thrown_away">
+        <item quantity="one">Thrown away: %1$s from %2$d batch</item>
+        <item quantity="other">Thrown away: %1$s from %2$d batches</item>
+    </plurals>
+    <!-- %1$d is the number of entries of the food. -->
+    <plurals name="food_history_show_all">
+        <item quantity="one">Show %1$d entry</item>
+        <item quantity="other">Show all %1$d entries</item>
+    </plurals>
 
     <!-- Used and thrown away. -->
     <string name="action_used">Used</string>

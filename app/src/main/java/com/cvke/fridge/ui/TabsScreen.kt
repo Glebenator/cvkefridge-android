@@ -1,6 +1,12 @@
 package com.cvke.fridge.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
@@ -45,8 +51,15 @@ import androidx.compose.ui.unit.dp
 import com.cvke.fridge.R
 import com.cvke.fridge.inventory.InventoryAction
 import com.cvke.fridge.reminder.ReminderSettings
+import com.cvke.fridge.ui.theme.Motion
 
-/** The tabs of the app, with the names of FridgeFriend. The icon of the selected tab is filled. */
+/**
+ * The tabs of the app. Home and My Fridge have the names of FridgeFriend. The icon of the selected tab is filled.
+ *
+ * History is a tab, not a screen that opens from Home or from a menu. It is a destination at the top level: it shows
+ * all food that ended, not a part of one food or of one screen. The Material navigation bar is for three to five
+ * destinations of the same importance, and a destination in a menu is hard to find.
+ */
 enum class Tab(
     @param:DrawableRes val icon: Int,
     @param:DrawableRes val selectedIcon: Int,
@@ -55,16 +68,21 @@ enum class Tab(
 ) {
     HOME(R.drawable.ic_home_outline, R.drawable.ic_home, R.string.tab_home, "tab_home"),
     MY_FRIDGE(R.drawable.ic_fridge_outline, R.drawable.ic_fridge, R.string.tab_my_fridge, "tab_my_fridge"),
+
+    /** The icon has no filled form. The indicator of the navigation bar shows the selection. */
+    HISTORY(R.drawable.ic_history, R.drawable.ic_history, R.string.tab_history, "tab_history"),
 }
 
 /**
- * Home and My Fridge: the screen of the selected tab, the Material navigation bar below it, and the two buttons that
- * add food. A tab change is instant. Each tab keeps its scroll position, and My Fridge keeps its filters, its search
- * text, and its sort order, also while another screen is above the tabs. Back on My Fridge goes to Home.
+ * Home, My Fridge, and History: the screen of the selected tab, the Material navigation bar below it, and the two
+ * buttons that add food. A tab change is instant. Each tab keeps its scroll position, and My Fridge keeps its filters,
+ * its search text, and its sort order, also while another screen is above the tabs. Back on My Fridge and on History
+ * goes to Home.
  *
  * The two ways to add food are each one tap: the floating action button opens the scanner, and the small floating
  * action button above it opens the form for food with no barcode. A menu would add a tap to each way. A long press on
- * a button shows its name.
+ * a button shows its name. History does not have the two buttons: a floating action button is for the main action of
+ * a screen, and on History the main action is in each entry.
  *
  * The filter of My Fridge is here, because Home opens My Fridge with a filter: "View all" shows all food, and the
  * number of expiring or expired batches shows the food with that freshness in all storage areas. A tap on the reminder
@@ -130,8 +148,17 @@ fun TabsScreen(
         },
         snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButton = {
-            // The buttons are there when the inventory is loaded. Before that, the form cannot save.
-            if (state is FridgeUiState.Ready) AddButtons(onScan = ::scan, onAddByHand = ::addFood)
+            // The buttons are there when the inventory is loaded. Before that, the form cannot save. They grow and
+            // shrink when the person goes to History and back, as the Material motion of a floating button does.
+            if (state is FridgeUiState.Ready) {
+                AnimatedVisibility(
+                    visible = tab != Tab.HISTORY,
+                    enter = scaleIn(tween(Motion.ENTER_MILLIS, easing = Motion.standard)) + fadeIn(tween(Motion.ENTER_MILLIS)),
+                    exit = scaleOut(tween(Motion.ENTER_MILLIS, easing = Motion.standard)) + fadeOut(tween(Motion.ENTER_MILLIS)),
+                ) {
+                    AddButtons(onScan = ::scan, onAddByHand = ::addFood)
+                }
+            }
         },
         containerColor = MaterialTheme.colorScheme.surface,
         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
@@ -163,6 +190,12 @@ fun TabsScreen(
                         onOpenFood = onOpenFood,
                         onManageAreas = onManageAreas,
                         onPerform = onPerform,
+                        onTryAgain = onTryAgain,
+                        insets = insets,
+                    )
+                    Tab.HISTORY -> HistoryScreen(
+                        state,
+                        onOpenFood = onOpenFood,
                         onTryAgain = onTryAgain,
                         insets = insets,
                     )
