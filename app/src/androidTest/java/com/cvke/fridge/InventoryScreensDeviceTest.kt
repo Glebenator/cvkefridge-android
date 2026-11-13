@@ -68,8 +68,10 @@ class InventoryScreensDeviceTest : DeviceTest() {
         rule.onNodeWithText("Baby spinach").assertIsDisplayed()
         rule.onAllNodesWithTag("food_sample-chicken/fridge").assertCountEquals(0)
 
-        // "View all" opens My Fridge with no filter.
+        // "View all" opens My Fridge with no filter. On a small screen, the button is clear of the two buttons that add
+        // food when the row of cards below it is in view.
         rule.onNodeWithTag("tab_home").performClick()
+        rule.onNodeWithTag("attention_list").performScrollTo()
         rule.onNodeWithTag("view_all").performScrollTo().performClick()
         rule.onNodeWithTag("my_fridge_screen").assertIsDisplayed()
         rule.onNodeWithTag("filter_expiring").assertIsNotSelected()
