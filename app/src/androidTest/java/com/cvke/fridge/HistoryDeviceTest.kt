@@ -1,6 +1,8 @@
 package com.cvke.fridge
 
 import android.graphics.BitmapFactory
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasContentDescription
@@ -10,8 +12,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.swipeRight
 import androidx.test.core.app.ActivityScenario
 import com.cvke.fridge.core.Batch
@@ -65,7 +68,12 @@ class HistoryDeviceTest : DeviceTest() {
         rule.onNodeWithTag("tab_my_fridge").performClick()
         rule.onNodeWithTag("food_t-milk/fridge").performTouchInput { swipeRight() }
         waitFor(hasText("2 l of Milk used"))
-        rule.onNodeWithTag("food_t-cheese/fridge").performTouchInput { swipeLeft() }
+        // The card of the milk goes, because the milk has no active batch now. On a small screen, the message is above
+        // the floating buttons, in front of the middle of the card. So the swipe is near the top edge of the card.
+        waitUntilGone(hasTestTag("food_t-milk/fridge"))
+        rule.onNodeWithTag("food_t-cheese/fridge").performTouchInput {
+            swipe(start = Offset(centerX, top + EDGE_PIXELS), end = Offset(left, top + EDGE_PIXELS))
+        }
         waitFor(hasText("200 g of Cheese thrown away"))
         val history = inventory().history
         val milk = history.single { it.productId == "t-milk" }.changeId
@@ -93,8 +101,9 @@ class HistoryDeviceTest : DeviceTest() {
         rule.onNodeWithTag("history_filter_all").performClick()
         list.performScrollToNode(hasTestTag("history_$milk"))
 
-        // A tap on an entry opens the screen of the food, with its history.
-        rule.onNodeWithTag("history_$milk").performClick()
+        // A tap on an entry opens the screen of the food, with its history. On a small screen, the message of the throw
+        // away can be in front of the entry, so the test uses the click action of the entry, as a screen reader does.
+        rule.onNodeWithTag("history_$milk").performSemanticsAction(SemanticsActions.OnClick)
         waitFor(hasTestTag("food_screen"))
         rule.onNodeWithTag("no_batches").assertIsDisplayed()
         rule.onNodeWithTag("food_list").performScrollToNode(hasTestTag("food_history_$milk"))
@@ -180,5 +189,8 @@ class HistoryDeviceTest : DeviceTest() {
     private companion object {
         /** A message with "Undo" stays for 10 seconds, or longer with an accessibility service on. */
         const val MESSAGE_MILLIS = 30_000L
+
+        /** The distance of a swipe from the top edge of a card. */
+        const val EDGE_PIXELS = 8f
     }
 }
