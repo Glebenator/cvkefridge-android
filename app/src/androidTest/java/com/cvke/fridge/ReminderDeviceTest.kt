@@ -7,6 +7,7 @@ import android.app.Notification
 import android.app.NotificationManager
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.SystemClock
 import android.service.notification.StatusBarNotification
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
@@ -76,7 +77,22 @@ class ReminderDeviceTest : DeviceTest() {
      */
     private fun windowPackages(): List<String> = automation.windows.mapNotNull { it.root?.packageName?.toString() }
 
-    private fun waitForWindowOf(packageName: (String) -> Boolean) = rule.waitUntil(TIMEOUT_MILLIS) { windowPackages().any(packageName) }
+    /**
+     * Waits for a window of [packageName]. On Android 16, a dialog of the system about another app, for example "Play
+     * Store keeps stopping" on the emulator, hides the other windows from the test while it is in front. So the test
+     * closes such a dialog with the system back button, not more than one time each second.
+     */
+    private fun waitForWindowOf(packageName: (String) -> Boolean) {
+        var lastBack = 0L
+        rule.waitUntil(TIMEOUT_MILLIS) {
+            val packages = windowPackages()
+            if (SYSTEM_PACKAGE in packages && SystemClock.uptimeMillis() - lastBack > 1_000) {
+                automation.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+                lastBack = SystemClock.uptimeMillis()
+            }
+            packages.any(packageName)
+        }
+    }
 
     /**
      * Closes the window of [packageName] with the system back button. The back button goes to the window in front, which
@@ -268,5 +284,8 @@ class ReminderDeviceTest : DeviceTest() {
     private companion object {
         const val TIMEOUT_MILLIS = 10_000L
         const val BACK_ATTEMPTS = 3
+
+        /** The package of the dialogs of the system, for example the dialog of an app that stopped. */
+        const val SYSTEM_PACKAGE = "android"
     }
 }
