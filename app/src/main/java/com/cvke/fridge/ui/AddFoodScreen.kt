@@ -15,6 +15,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
@@ -268,9 +270,16 @@ fun AddFoodScreen(
                     form.suggestions(products, ready.foods)
                 }
             }
-            if (nameFocused && suggestions.isNotEmpty()) {
+            val showSuggestions = nameFocused && suggestions.isNotEmpty()
+            // On a small screen with the keyboard open, the suggestions can be below the visible part of the form.
+            val suggestionsView = remember { BringIntoViewRequester() }
+            LaunchedEffect(showSuggestions, suggestions) {
+                if (showSuggestions) suggestionsView.bringIntoView()
+            }
+            if (showSuggestions) {
                 Suggestions(
                     suggestions,
+                    modifier = Modifier.bringIntoViewRequester(suggestionsView),
                     inStock = inStock,
                     title = if (recent) stringResource(R.string.suggestions_recent) else null,
                     onSelect = { suggestion ->

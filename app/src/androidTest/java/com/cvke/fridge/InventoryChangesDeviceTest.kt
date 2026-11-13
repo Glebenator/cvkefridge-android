@@ -44,7 +44,7 @@ class InventoryChangesDeviceTest : DeviceTest() {
         // A food of the table gives its category and an estimated date. The date is not today.
         rule.onNodeWithTag("field_name").performTextInput("but")
         waitFor(hasTestTag("suggestion_food_fk-1"))
-        rule.onNodeWithTag("suggestion_food_fk-1").performClick()
+        rule.onNodeWithTag("suggestion_food_fk-1").performScrollTo().performClick()
         rule.onNodeWithTag("field_name").assertTextContains("Butter")
         rule.onNodeWithTag("field_category").assertTextContains("Dairy")
         rule.onNodeWithTag("field_expiry").assertTextContains("estimated", substring = true)
@@ -85,7 +85,7 @@ class InventoryChangesDeviceTest : DeviceTest() {
         // Butter is usually kept in the fridge.
         rule.onNodeWithTag("field_name").performTextInput("but")
         waitFor(hasTestTag("suggestion_food_fk-1"))
-        rule.onNodeWithTag("suggestion_food_fk-1").performClick()
+        rule.onNodeWithTag("suggestion_food_fk-1").performScrollTo().performClick()
         rule.onNodeWithTag("field_storage_area").assertTextContains("Fridge")
         rule.onNodeWithTag("save").performClick()
         waitUntilGone(hasTestTag("add_food_screen"))
