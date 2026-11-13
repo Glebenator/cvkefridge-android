@@ -158,7 +158,7 @@ fun FoodDetailScreen(
         val allBatches = detail.batches.map { it.id }
         Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.TopCenter) {
             LazyColumn(
-                Modifier.widthIn(max = Size.contentMax).fillMaxSize(),
+                Modifier.widthIn(max = Size.contentMax).fillMaxSize().testTag("food_list"),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {

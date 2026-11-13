@@ -67,6 +67,8 @@ class InventoryChangesDeviceTest : DeviceTest() {
     @Test
     fun aSwipeRecordsTheOldestBatchAsUsedAndUndoBringsItBack() {
         start(SampleInventory.changes(today()))
+        // The sample has a history. The test reads only the entries that it makes.
+        val before = inventory().history
         rule.onNodeWithTag("tab_my_fridge").performClick()
         val milk = hasTestTag("food_sample-milk/fridge")
         rule.onNodeWithTag("my_fridge_screen").performScrollToNode(milk)
@@ -76,16 +78,17 @@ class InventoryChangesDeviceTest : DeviceTest() {
         rule.onNode(milk).performTouchInput { swipeRight() }
         waitFor(hasText("1 l of Whole milk used"))
         waitFor(milk and hasText("2 l", substring = true))
-        assertEquals(listOf(Outcome.USED), inventory().history.map { it.outcome })
+        assertEquals(listOf(Outcome.USED), (inventory().history - before.toSet()).map { it.outcome })
 
         rule.onNodeWithText("Undo").performClick()
         waitFor(milk and hasText("3 l", substring = true))
-        assertEquals(emptyList<Any>(), inventory().history)
+        assertEquals(before, inventory().history)
     }
 
     @Test
     fun theMenuOfACardRecordsAQuantityAsThrownAway() {
         start(SampleInventory.changes(today()))
+        val before = inventory().history.toSet()
         rule.onNodeWithTag("tab_my_fridge").performClick()
         val cheddar = hasTestTag("food_sample-cheddar/fridge")
         // The search brings the card to the top of the list, clear of the button that adds food.
@@ -104,7 +107,7 @@ class InventoryChangesDeviceTest : DeviceTest() {
 
         waitFor(hasText("100 g of Cheddar thrown away"))
         waitFor(cheddar and hasText("250 g", substring = true))
-        val entry = inventory().history.single()
+        val entry = (inventory().history - before).single()
         assertEquals(Outcome.THROWN_AWAY to 100_000L, entry.outcome to entry.quantity)
     }
 
