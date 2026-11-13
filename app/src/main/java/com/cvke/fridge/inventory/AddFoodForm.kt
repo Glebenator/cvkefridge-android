@@ -104,6 +104,18 @@ data class AddFoodForm(
         )
     }
 
+    /**
+     * The form for a product that the person had before: the storage area of its newest batch and its usual quantity,
+     * when they are known, and the estimated date. A date of an earlier batch is never used.
+     *
+     * @param decimalSeparator The decimal sign of the locale, for the quantity text.
+     */
+    fun again(values: AgainValues, decimalSeparator: Char): AddFoodForm = copy(
+        storageAreaId = values.storageAreaId ?: storageAreaId,
+        quantity = values.quantity?.let { QuantityText.format(it, decimalSeparator) } ?: quantity,
+        expiry = ExpiryInput.Suggested,
+    )
+
     /** The empty form for the next food. It keeps the storage area. */
     fun next(): AddFoodForm = AddFoodForm(storageAreaId = storageAreaId)
 
@@ -130,6 +142,19 @@ data class AddFoodForm(
                 barcode = scan.barcode,
             )
         }
+
+        /**
+         * The form that adds a batch to a product that the person had before ("Add again"). [startArea] is the storage
+         * area when the product has no known storage area.
+         */
+        fun again(product: Product, values: AgainValues, startArea: String, decimalSeparator: Char): AddFoodForm =
+            AddFoodForm(
+                name = product.name,
+                foodId = product.foodId,
+                category = product.category,
+                unit = product.unit,
+                storageAreaId = startArea,
+            ).again(values, decimalSeparator)
 
         /**
          * The storage area of a new form: the storage area of the last batch that the person added, then the storage

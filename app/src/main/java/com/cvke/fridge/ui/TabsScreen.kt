@@ -91,6 +91,7 @@ enum class Tab(
  *
  * @param onAddFood Opens the form that adds food. It gets the storage area of the tab of My Fridge that is open.
  * @param onScan Opens the scanner. It gets the storage area of the tab of My Fridge that is open.
+ * @param onAddAgain Opens the form that adds a batch to a product that the person had before.
  * @param onShowRequestDone My Fridge shows the request with this identifier.
  */
 @Composable
@@ -100,6 +101,7 @@ fun TabsScreen(
     onAddFood: (openAreaId: String?) -> Unit,
     onScan: (openAreaId: String?) -> Unit,
     onOpenFood: (productId: String) -> Unit,
+    onAddAgain: (productId: String) -> Unit,
     onManageAreas: () -> Unit,
     onPerform: (InventoryAction) -> Unit,
     onTryAgain: () -> Unit,
@@ -196,6 +198,7 @@ fun TabsScreen(
                     Tab.HISTORY -> HistoryScreen(
                         state,
                         onOpenFood = onOpenFood,
+                        onAddAgain = onAddAgain,
                         onTryAgain = onTryAgain,
                         insets = insets,
                     )

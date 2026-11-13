@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -62,6 +64,9 @@ import com.cvke.fridge.ui.theme.Size
  * days left in the colour of its freshness, its expiry date with "printed" or "estimated", its storage area, and its
  * date added. The days left of a card on My Fridge are short, so the full date is here
  * (`docs/research/competitor-apps.md` in the cvkefridge repository, section 8.2).
+ *
+ * A food with no active batch, for example after the person used all of it, says so and has "Add again". "Add again"
+ * and "Add a batch" open the add form with the storage area of the newest batch and the usual quantity.
  *
  * "Used" and "Thrown away" are two buttons with space between them, below the product. They take from the oldest
  * batch first. The menu of a batch has the same two actions for that batch, "Edit", and "Delete batch". "Delete food"
@@ -128,7 +133,16 @@ fun FoodDetailScreen(
             ) {
                 item(key = "product") { ProductHeader(detail, Modifier.padding(bottom = 8.dp)) }
                 if (detail.batches.isEmpty()) {
-                    item(key = "none") { EmptyState(stringResource(R.string.food_no_batches), "no_batches") }
+                    // The core keeps a product when its batches end. "Add again" adds a batch to it.
+                    item(key = "none") {
+                        EmptyState(stringResource(R.string.food_no_batches), "no_batches") {
+                            Button(onAddBatch, Modifier.padding(top = 16.dp).testTag("add_again")) {
+                                Icon(painterResource(R.drawable.ic_add), contentDescription = null, Modifier.size(ButtonDefaults.IconSize))
+                                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                                Text(stringResource(R.string.action_add_again))
+                            }
+                        }
+                    }
                 } else {
                     item(key = "take") {
                         TakeButtons(
@@ -155,12 +169,12 @@ fun FoodDetailScreen(
                             onDelete = { onPerform(InventoryAction.DeleteBatches(screen.productId, listOf(batch.id))) },
                         )
                     }
-                }
-                item(key = "add") {
-                    OutlinedButton(onAddBatch, Modifier.padding(top = 8.dp).fillMaxWidth().testTag("add_batch")) {
-                        Icon(painterResource(R.drawable.ic_add), contentDescription = null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.food_add_batch))
+                    item(key = "add") {
+                        OutlinedButton(onAddBatch, Modifier.padding(top = 8.dp).fillMaxWidth().testTag("add_batch")) {
+                            Icon(painterResource(R.drawable.ic_add), contentDescription = null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.food_add_batch))
+                        }
                     }
                 }
                 if (history.isNotEmpty()) {

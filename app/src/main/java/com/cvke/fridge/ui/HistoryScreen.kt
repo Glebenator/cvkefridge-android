@@ -30,6 +30,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -57,7 +58,9 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.role
@@ -83,7 +86,8 @@ import com.cvke.fridge.ui.theme.Size
 /**
  * History, the third tab: what was used and what was thrown away, the newest first, with a header for each day. Each
  * entry shows the food, the quantity, and the outcome in words and with an icon. A tap on an entry opens the screen of
- * the food.
+ * the food. The button at the end of an entry adds the food again: it opens the add form with the values of the
+ * product (`docs/research/competitor-apps.md` in the cvkefridge repository, section 8.3, item 6).
  *
  * At the top, a summary counts the batches that were used and thrown away in this month, the last month, or all of
  * the history, with the quantities for each unit, and names the foods that were thrown away most often
@@ -99,6 +103,7 @@ import com.cvke.fridge.ui.theme.Size
 fun HistoryScreen(
     state: FridgeUiState,
     onOpenFood: (productId: String) -> Unit,
+    onAddAgain: (productId: String) -> Unit,
     onTryAgain: () -> Unit,
     insets: PaddingValues,
     modifier: Modifier = Modifier,
@@ -165,7 +170,12 @@ fun HistoryScreen(
                         items(rows, key = { it.key }, contentType = { it is HistoryItem.Day }) { row ->
                             when (row) {
                                 is HistoryItem.Day -> DayHeader(row, Modifier.padding(side))
-                                is HistoryItem.Entry -> HistoryEntry(row, onOpen = { onOpenFood(row.line.productId) }, Modifier.padding(edges))
+                                is HistoryItem.Entry -> HistoryEntry(
+                                    row,
+                                    onOpen = { onOpenFood(row.line.productId) },
+                                    onAddAgain = { onAddAgain(row.line.productId) },
+                                    Modifier.padding(edges),
+                                )
                             }
                         }
                     }
@@ -407,21 +417,31 @@ private fun DayHeader(day: HistoryItem.Day, modifier: Modifier = Modifier) {
 }
 
 /**
- * One entry: the icon of the category, the name of the food, the quantity, and the outcome in words with its icon.
- * Screen readers hear the entry as one item with its day, for example "Whole milk, 1 l, Used, Today".
+ * One entry: the icon of the category, the name of the food, the quantity, the outcome in words with its icon, and the
+ * button that adds the food again. Screen readers hear the entry as one item with its day, for example "Whole milk,
+ * 1 l, Used, Today", and they have "Add again" as an action of the item also.
  */
 @Composable
-private fun HistoryEntry(entry: HistoryItem.Entry, onOpen: () -> Unit, modifier: Modifier = Modifier) {
+private fun HistoryEntry(entry: HistoryItem.Entry, onOpen: () -> Unit, onAddAgain: () -> Unit, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     val line = entry.line
     val quantity = quantityText(line.quantity, line.unit)
     val outcome = stringResource(if (line.outcome == Outcome.USED) R.string.action_used else R.string.action_thrown_away)
     val description = stringResource(R.string.history_entry_description, line.name, quantity, outcome, dayText(line.date, entry.day))
     val separator = stringResource(R.string.meta_separator)
+    val again = stringResource(R.string.action_add_again)
     ListItem(
         modifier = modifier
             .clickable(onClick = onOpen)
-            .semantics { contentDescription = description }
+            .semantics {
+                contentDescription = description
+                customActions = listOf(
+                    CustomAccessibilityAction(again) {
+                        onAddAgain()
+                        true
+                    },
+                )
+            }
             .testTag("history_${line.changeId}"),
         headlineContent = { Text(line.name, maxLines = 2, overflow = TextOverflow.Ellipsis) },
         supportingContent = {
@@ -431,6 +451,15 @@ private fun HistoryEntry(entry: HistoryItem.Entry, onOpen: () -> Unit, modifier:
             }
         },
         leadingContent = { IconTile(line.category.icon(), scheme.secondaryContainer, scheme.onSecondaryContainer) },
+        trailingContent = {
+            IconButton(onClick = onAddAgain, Modifier.testTag("add_again_${line.changeId}")) {
+                Icon(
+                    painterResource(R.drawable.ic_add),
+                    contentDescription = stringResource(R.string.add_again_description, line.name),
+                    tint = scheme.onSurfaceVariant,
+                )
+            }
+        },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
     )
 }

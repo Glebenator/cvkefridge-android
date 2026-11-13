@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -48,6 +49,7 @@ import com.cvke.fridge.R
 import com.cvke.fridge.core.CalendarDate
 import com.cvke.fridge.core.Category
 import com.cvke.fridge.core.MeasureUnit
+import com.cvke.fridge.inventory.AddAgain
 import com.cvke.fridge.inventory.AddFoodForm
 import com.cvke.fridge.inventory.ExpiryChoice
 import com.cvke.fridge.inventory.ExpiryInput
@@ -64,7 +66,12 @@ import java.util.UUID
  * section 8.3). The name field suggests the foods of the table of foods and the products in the inventory. A name of
  * a product in the inventory adds a batch to that product. The expiry date starts as the estimated date for the food
  * and the storage area, and it is never today by default. "Save and add another" keeps the form open, with the
- * storage area.
+ * storage area. An empty name field suggests the foods that the person had before and has none of now, and such a
+ * food gets the storage area of its newest batch and its usual quantity.
+ *
+ * "Add again" and "Add a batch" ([Screen.AddFood.again]) open the form with the name of the product, the storage area
+ * of its newest batch, its usual quantity, and the estimated date from today. A date of an earlier batch is never in
+ * the form.
  *
  * After a scan ([Screen.AddFood.scan]), the form opens with the values of the product lookup: the name, the category,
  * the food of the table of foods, and the quantity of the package. The form says where the values come from, and the
@@ -99,14 +106,17 @@ fun AddFoodScreen(
     val areas = ready.inventory.storageAreas
     val scan = screen.scan
     val locale = LocalConfiguration.current.locales[0]
+    val separator = DecimalFormatSymbols.getInstance(locale).decimalSeparator
     val token = rememberSaveable { UUID.randomUUID().toString() }
     var form by rememberSaveable(stateSaver = AddFoodFormSaver) {
         val area = AddFoodForm.startArea(ready.lastAreaId, screen.openAreaId, areas)
         val existing = products.firstOrNull { it.id == screen.productId }
         mutableStateOf(
             when {
+                existing != null && screen.again ->
+                    AddFoodForm.again(existing, AddAgain.values(ready.inventory, existing.id), area, separator)
                 existing != null -> AddFoodForm(name = existing.name, storageAreaId = area, barcode = scan?.barcode)
-                scan != null -> AddFoodForm.scanned(scan, area, DecimalFormatSymbols.getInstance(locale).decimalSeparator)
+                scan != null -> AddFoodForm.scanned(scan, area, separator)
                 else -> AddFoodForm(storageAreaId = area)
             },
         )
@@ -148,6 +158,7 @@ fun AddFoodScreen(
     }
 
     val existing = form.product(products)
+    val inStock = remember(ready.inventory) { ready.inventory.activeBatches.mapTo(HashSet()) { it.productId } }
     val area = areas.firstOrNull { it.id == form.storageAreaId }
     val suggested = form.estimate(products, areas, ready.foods, ready.today)
     val nameError = form.nameError()?.takeIf { form.checked }?.let { stringResource(it.foodMessage()) }
@@ -196,16 +207,40 @@ fun AddFoodScreen(
                 },
                 supportingText = when {
                     nameError != null -> ({ Text(nameError, Modifier.testTag("error_name")) })
-                    existing != null -> ({ Text(stringResource(R.string.add_food_existing), Modifier.testTag("name_existing")) })
+                    existing != null -> ({
+                        Text(
+                            stringResource(if (existing.id in inStock) R.string.add_food_existing else R.string.add_food_again),
+                            Modifier.testTag("name_existing"),
+                        )
+                    })
                     else -> null
                 },
                 isError = nameError != null,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
                 singleLine = true,
             )
-            val suggestions = remember(form.name, form.foodId, products, ready.foods) { form.suggestions(products, ready.foods) }
+            // An empty name field shows the food that the person had before and has none of now. A form after a scan
+            // has its own name, so it does not show them.
+            val recent = scan == null && form.name.isBlank()
+            val suggestions = remember(form.name, form.foodId, products, ready.foods, ready.history, recent) {
+                if (recent) {
+                    AddAgain.recent(ready.history.lines, ready.inventory).map(Suggestion::OfProduct)
+                } else {
+                    form.suggestions(products, ready.foods)
+                }
+            }
             if (nameFocused && suggestions.isNotEmpty()) {
-                Suggestions(suggestions, onSelect = { form = form.withSuggestion(it) })
+                Suggestions(
+                    suggestions,
+                    inStock = inStock,
+                    title = if (recent) stringResource(R.string.suggestions_recent) else null,
+                    onSelect = { suggestion ->
+                        val selected = form.withSuggestion(suggestion)
+                        // A product that the person had before gets its storage area and its usual quantity.
+                        val product = (suggestion as? Suggestion.OfProduct)?.product?.takeIf { it.id !in inStock }
+                        form = if (product == null) selected else selected.again(AddAgain.values(ready.inventory, product.id), separator)
+                    },
+                )
             }
 
             if (existing == null) {
@@ -294,18 +329,38 @@ fun StorageAreaField(
 }
 
 /**
- * The suggestions below the name field. A product in the inventory says so. A food of the table shows the text that
- * tells it from the other foods with the same name.
+ * The suggestions below the name field. A product in the inventory says so, and a product that the person had before
+ * says that also. A food of the table shows the text that tells it from the other foods with the same name. The list
+ * of recent foods has a [title].
+ *
+ * @param inStock The products with an active batch.
  */
 @Composable
-private fun Suggestions(suggestions: List<Suggestion>, onSelect: (Suggestion) -> Unit, modifier: Modifier = Modifier) {
+private fun Suggestions(
+    suggestions: List<Suggestion>,
+    inStock: Set<String>,
+    title: String?,
+    onSelect: (Suggestion) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     OutlinedCard(modifier.fillMaxWidth().testTag("suggestions")) {
         Column {
+            if (title != null) {
+                Text(
+                    title,
+                    Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp).semantics { heading() },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
             suggestions.forEachIndexed { index, suggestion ->
                 if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 val (name, detail, tag) = when (suggestion) {
-                    is Suggestion.OfProduct ->
-                        Triple(suggestion.product.name, stringResource(R.string.suggestion_in_inventory), "suggestion_product_${suggestion.product.id}")
+                    is Suggestion.OfProduct -> Triple(
+                        suggestion.product.name,
+                        stringResource(if (suggestion.product.id in inStock) R.string.suggestion_in_inventory else R.string.suggestion_had_before),
+                        "suggestion_product_${suggestion.product.id}",
+                    )
                     is Suggestion.OfFood -> Triple(suggestion.food.name, suggestion.food.subtitle, "suggestion_food_${suggestion.food.id}")
                 }
                 ListItem(

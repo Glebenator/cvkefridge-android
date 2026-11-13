@@ -20,9 +20,16 @@ sealed interface Screen : NavKey {
      * @property openAreaId The storage area of the tab of My Fridge that was open, or null.
      * @property scan The values of a scan, or null for a form that the person fills in by hand. A form with a scan
      *   has the button "Save and scan next".
+     * @property again True for "Add again" and "Add a batch": the form starts with the storage area of the newest
+     *   batch of the product and its usual quantity (see [com.cvke.fridge.inventory.AddAgain]).
      */
     @Serializable
-    data class AddFood(val productId: String? = null, val openAreaId: String? = null, val scan: Scanned? = null) : Screen
+    data class AddFood(
+        val productId: String? = null,
+        val openAreaId: String? = null,
+        val scan: Scanned? = null,
+        val again: Boolean = false,
+    ) : Screen
 
     /**
      * The barcode scanner, with the explanation of the camera permission and the product lookup.

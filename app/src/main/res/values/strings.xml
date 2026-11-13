@@ -190,8 +190,14 @@
     <string name="field_expiry_date">Expiry date</string>
     <!-- Below the name field, when a product in the inventory has this name. -->
     <string name="add_food_existing">This food is in your inventory. The form adds a batch to it.</string>
+    <!-- Below the name field, when the person had a food with this name before and has none of it now. -->
+    <string name="add_food_again">You had this food before. The form adds a new batch to it.</string>
     <!-- Below a suggested name that is the name of a product in the inventory. -->
     <string name="suggestion_in_inventory">In your inventory</string>
+    <!-- Below a suggested name of a food that the person had before and has none of now. -->
+    <string name="suggestion_had_before">You had this before</string>
+    <!-- Above the suggestions of an empty name field: the foods that the person had before. -->
+    <string name="suggestions_recent">Recent</string>
     <!-- The last item in the list of the storage areas of a form. -->
     <string name="storage_areas_manage">Manage storage areas</string>
     <string name="error_storage_area">Select a storage area.</string>
@@ -205,7 +211,7 @@
     </plurals>
     <!-- On the batch that a use takes from first. -->
     <string name="food_use_first">Use first</string>
-    <string name="food_no_batches">No batches of this food</string>
+    <string name="food_no_batches">You have none of this food now</string>
     <string name="food_add_batch">Add a batch</string>
     <!-- %1$s is a date. -->
     <string name="batch_printed_date">Printed date: %1$s</string>
@@ -227,6 +233,11 @@
         <item quantity="one">Show %1$d entry</item>
         <item quantity="other">Show all %1$d entries</item>
     </plurals>
+
+    <!-- A new batch of a food that the person had before. -->
+    <string name="action_add_again">Add again</string>
+    <!-- For screen readers: the button of a history entry. %1$s is the name of the food. -->
+    <string name="add_again_description">Add %1$s again</string>
 
     <!-- Used and thrown away. -->
     <string name="action_used">Used</string>
