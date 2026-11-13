@@ -32,9 +32,12 @@ CVKE Fridge has three repositories. This repository is the native Android app.
 ## Design and access
 
 - Use Material components, theme colours, typography, and standard Android navigation.
-- Support system light and dark themes, edge-to-edge insets, and screen rotation. The colour scheme comes
-  from the green of FridgeFriend, and the app does not use dynamic colour (ADR 0006 in the cvkefridge repository).
-  Take colours from `MaterialTheme.colorScheme`, and do not change one colour of the scheme by hand.
+- Support system light and dark themes, edge-to-edge insets, and screen rotation. On Android 12 and later,
+  the colour scheme comes from the wallpaper colours of the phone (dynamic colour). On Android 10 and 11, it comes from
+  the green of FridgeFriend (ADR 0007 in the cvkefridge repository). Take colours from `MaterialTheme.colorScheme`,
+  and do not change one colour of the scheme by hand. A colour with a fixed meaning (fresh, expiring) or a brand
+  colour comes from `CvkeFridgeTheme.status` or `CvkeFridgeTheme.brand`. Do not use a role of the scheme for it,
+  because the scheme can have any hue.
 - The brand parts are in `ui/theme/Brand.kt`: the signature gradient, the slice, the spinner, and the motion values.
   Their rules are in the design system of the owner (My Design Language) and in `design/product.md` of the cvkefridge
   repository. Use the signature gradient one time on a screen, with no text on it. Do not draw the cvke letters again.

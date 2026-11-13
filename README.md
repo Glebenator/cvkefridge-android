@@ -20,9 +20,10 @@ CVKE Fridge has three repositories:
   for each food in each storage area, with tabs for the storage areas, a search field, one row of chips for the
   category and the freshness, and a sort control. A tap on the number of expiring or expired batches on Home opens My
   Fridge with that freshness. The two screens have the contents of FridgeFriend (the `basic_ff` repository), with
-  Material 3 components. The colours are a Material 3 colour scheme from its green. The app does not use the
-  wallpaper colours. The brand parts come from the design system of the owner. The decision record is ADR 0006 in the
-  cvkefridge repository.
+  Material 3 components. On Android 12 and later, the colours come from the wallpaper of the phone. On
+  Android 10 and 11, they are a Material 3 colour scheme from the green of FridgeFriend. Fresh is green and expiring is
+  amber with each wallpaper. The brand parts come from the design system of the owner. The decision records are
+  ADR 0006 and ADR 0007 in the cvkefridge repository.
 - **Two ways to add food, each one tap.** The floating action button of the two tabs opens the scanner. The small
   floating action button above it opens the form for food with no barcode. A long press on a button shows its name.
   The empty state has the same two buttons. A menu was not used, because it adds a tap to each way.

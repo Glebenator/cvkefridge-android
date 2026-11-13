@@ -6,7 +6,9 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-// The colours of the app are a Material 3 colour scheme from the green of FridgeFriend, #53D181 (`primary` in
+// These two schemes are for Android 10 and 11, which have no wallpaper colours. On Android 12 and later, the theme
+// uses the wallpaper colours of the phone (see `CvkeFridgeTheme`).
+// The colours are a Material 3 colour scheme from the green of FridgeFriend, #53D181 (`primary` in
 // `styles/theme.ts` of the `basic_ff` repository). They come from material-color-utilities 0.3.0 with the scheme
 // "fidelity", which keeps the green as it is in `primaryContainer`. Each pair of a colour and its "on" colour has a
 // contrast of 4.5:1 or more. Do not change one value by hand: make the scheme again from the seed colour.
