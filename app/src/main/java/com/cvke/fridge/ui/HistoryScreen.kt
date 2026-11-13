@@ -70,6 +70,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.cvke.fridge.R
+import com.cvke.fridge.photo.ProductPhoto
 import com.cvke.fridge.core.CalendarDate
 import com.cvke.fridge.core.Outcome
 import com.cvke.fridge.history.DayName
@@ -80,7 +81,6 @@ import com.cvke.fridge.history.HistorySummary
 import com.cvke.fridge.history.OutcomeTotal
 import com.cvke.fridge.history.QuantityTotal
 import com.cvke.fridge.ui.theme.BrandSpinner
-import com.cvke.fridge.ui.theme.IconTile
 import com.cvke.fridge.ui.theme.Size
 
 /**
@@ -102,6 +102,7 @@ import com.cvke.fridge.ui.theme.Size
 @Composable
 fun HistoryScreen(
     state: FridgeUiState,
+    photos: Map<String, ProductPhoto>,
     onOpenFood: (productId: String) -> Unit,
     onAddAgain: (productId: String) -> Unit,
     onTryAgain: () -> Unit,
@@ -145,7 +146,7 @@ fun HistoryScreen(
                         item(key = "summary") {
                             Column(Modifier.padding(side)) {
                                 if (ready?.content?.sample == true) SampleNote(Modifier.padding(bottom = 12.dp))
-                                SummaryCard(history.summary(period), period, onPeriodChange = { period = it })
+                                SummaryCard(history.summary(period), period, photos, onPeriodChange = { period = it })
                             }
                         }
                         stickyHeader(key = "filter") { FilterButtons(filter, onSelect = { filter = it }, Modifier.padding(side)) }
@@ -172,6 +173,7 @@ fun HistoryScreen(
                                 is HistoryItem.Day -> DayHeader(row, Modifier.padding(side))
                                 is HistoryItem.Entry -> HistoryEntry(
                                     row,
+                                    photos[row.line.productId],
                                     onOpen = { onOpenFood(row.line.productId) },
                                     onAddAgain = { onAddAgain(row.line.productId) },
                                     Modifier.padding(edges),
@@ -238,7 +240,13 @@ private fun HistoryLoading(modifier: Modifier = Modifier) {
  * by side. With large text they do not fit, and the second is below the first.
  */
 @Composable
-private fun SummaryCard(summary: HistorySummary, period: HistoryPeriod, onPeriodChange: (HistoryPeriod) -> Unit, modifier: Modifier = Modifier) {
+private fun SummaryCard(
+    summary: HistorySummary,
+    period: HistoryPeriod,
+    photos: Map<String, ProductPhoto>,
+    onPeriodChange: (HistoryPeriod) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val scheme = MaterialTheme.colorScheme
     Card(
         modifier.fillMaxWidth().testTag("history_summary"),
@@ -303,7 +311,13 @@ private fun SummaryCard(summary: HistorySummary, period: HistoryPeriod, onPeriod
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        IconTile(product.category.icon(), scheme.secondaryContainer, scheme.onSecondaryContainer, size = 32.dp)
+                        ProductTile(
+                            photos[product.productId],
+                            product.category,
+                            scheme.secondaryContainer,
+                            scheme.onSecondaryContainer,
+                            size = 32.dp,
+                        )
                         Text(
                             product.name,
                             Modifier.weight(1f),
@@ -417,12 +431,18 @@ private fun DayHeader(day: HistoryItem.Day, modifier: Modifier = Modifier) {
 }
 
 /**
- * One entry: the icon of the category, the name of the food, the quantity, the outcome in words with its icon, and the
- * button that adds the food again. Screen readers hear the entry as one item with its day, for example "Whole milk,
- * 1 l, Used, Today", and they have "Add again" as an action of the item also.
+ * One entry: the photo of the product or the icon of its category, the name of the food, the quantity, the outcome in
+ * words with its icon, and the button that adds the food again. Screen readers hear the entry as one item with its
+ * day, for example "Whole milk, 1 l, Used, Today", and they have "Add again" as an action of the item also.
  */
 @Composable
-private fun HistoryEntry(entry: HistoryItem.Entry, onOpen: () -> Unit, onAddAgain: () -> Unit, modifier: Modifier = Modifier) {
+private fun HistoryEntry(
+    entry: HistoryItem.Entry,
+    photo: ProductPhoto?,
+    onOpen: () -> Unit,
+    onAddAgain: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val scheme = MaterialTheme.colorScheme
     val line = entry.line
     val quantity = quantityText(line.quantity, line.unit)
@@ -450,7 +470,7 @@ private fun HistoryEntry(entry: HistoryItem.Entry, onOpen: () -> Unit, onAddAgai
                 Text("$quantity $separator $outcome")
             }
         },
-        leadingContent = { IconTile(line.category.icon(), scheme.secondaryContainer, scheme.onSecondaryContainer) },
+        leadingContent = { ProductTile(photo, line.category, scheme.secondaryContainer, scheme.onSecondaryContainer) },
         trailingContent = {
             IconButton(onClick = onAddAgain, Modifier.testTag("add_again_${line.changeId}")) {
                 Icon(

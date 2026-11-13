@@ -46,8 +46,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.cvke.fridge.R
+import com.cvke.fridge.photo.ProductPhoto
 import com.cvke.fridge.core.Outcome
-import com.cvke.fridge.ui.theme.IconTile
 import kotlinx.coroutines.launch
 
 /** What the person can do with a food from its card. */
@@ -65,9 +65,9 @@ enum class CardAction {
 }
 
 /**
- * One food, as a Material list item on a card: the icon of its category, its name, its quantity, the days left of the
- * batch to use first in the colour of its freshness, and its category. A food with batches of different expiry dates
- * says how many. A tap opens the screen of the food.
+ * One food, as a Material list item on a card: the photo of the product or the icon of its category, its name, its
+ * quantity, the days left of the batch to use first in the colour of its freshness, and its category. A food with
+ * batches of different expiry dates says how many. A tap opens the screen of the food.
  *
  * The fast actions are on the card (`docs/research/competitor-apps.md` in the cvkefridge repository, sections 4 and
  * 8.2). A swipe to the end records the oldest batch as used. A swipe to the start records it as thrown away. The
@@ -76,7 +76,7 @@ enum class CardAction {
  * card. "Delete" is only in the menu, below a line, because it is for a mistake.
  */
 @Composable
-fun FoodCard(row: FoodRow, onOpen: () -> Unit, onAction: (CardAction) -> Unit, modifier: Modifier = Modifier) {
+fun FoodCard(row: FoodRow, photo: ProductPhoto?, onOpen: () -> Unit, onAction: (CardAction) -> Unit, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     val scope = rememberCoroutineScope()
     val swipe = rememberSwipeToDismissBoxState()
@@ -145,7 +145,7 @@ fun FoodCard(row: FoodRow, onOpen: () -> Unit, onAction: (CardAction) -> Unit, m
                         }
                     }
                 },
-                leadingContent = { IconTile(row.category.icon(), scheme.secondaryContainer, scheme.onSecondaryContainer) },
+                leadingContent = { ProductTile(photo, row.category, scheme.secondaryContainer, scheme.onSecondaryContainer) },
                 trailingContent = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(stringResource(row.category.label()))

@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.cvke.fridge.BuildConfig
 import com.cvke.fridge.R
+import com.cvke.fridge.photo.ProductPhoto
 import com.cvke.fridge.core.AppVersion
 import com.cvke.fridge.core.Freshness
 import com.cvke.fridge.reminder.ReminderSettings
@@ -87,11 +88,13 @@ import java.time.LocalTime
  * When the inventory has food with an expiry date and reminders are off, Home offers reminders below the totals (see
  * [ReminderOffer]). It never asks for the notification permission at the first start.
  *
+ * @param photos The photo of each product that has one.
  * @param reminders The reminder settings, or null before they are read.
  */
 @Composable
 fun HomeScreen(
     state: FridgeUiState,
+    photos: Map<String, ProductPhoto>,
     onViewAll: () -> Unit,
     onShowFreshness: (Freshness) -> Unit,
     onAddFood: () -> Unit,
@@ -175,7 +178,7 @@ fun HomeScreen(
             if (state is FridgeUiState.LoadFailed) {
                 LoadFailed(onTryAgain, Modifier.padding(side))
             } else {
-                NeedsAttention(content, onViewAll, onAddFood, onScan, onOpenFood, side)
+                NeedsAttention(content, photos, onViewAll, onAddFood, onScan, onOpenFood, side)
             }
         }
     }
@@ -325,6 +328,7 @@ private fun Metric(
 @Composable
 private fun NeedsAttention(
     content: InventoryContent?,
+    photos: Map<String, ProductPhoto>,
     onViewAll: () -> Unit,
     onAddFood: () -> Unit,
     onScan: () -> Unit,
@@ -392,7 +396,7 @@ private fun NeedsAttention(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     content?.attention.orEmpty().forEach { batch ->
-                        AttentionCard(batch, onOpen = { onOpenFood(batch.productId) }, Modifier.fillMaxHeight())
+                        AttentionCard(batch, photos[batch.productId], onOpen = { onOpenFood(batch.productId) }, Modifier.fillMaxHeight())
                     }
                 }
             }
@@ -473,12 +477,13 @@ private fun Notice(text: String, tag: String, modifier: Modifier = Modifier, lea
 }
 
 /**
- * One batch that needs attention: the icon of its category, its name, its quantity, its category, and the days left.
+ * One batch that needs attention: the photo of the product or the icon of its category, its name, its quantity, its
+ * category, and the days left.
  * The card has the error colours for an expired batch and the amber for an expiring batch, and the days left say the
  * same in words. A tap opens the screen of the food. Screen readers hear the card as one item.
  */
 @Composable
-private fun AttentionCard(batch: AttentionBatch, onOpen: () -> Unit, modifier: Modifier = Modifier) {
+private fun AttentionCard(batch: AttentionBatch, photo: ProductPhoto?, onOpen: () -> Unit, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     val status = CvkeFridgeTheme.status
     val expired = batch.freshness == Freshness.EXPIRED
@@ -491,7 +496,7 @@ private fun AttentionCard(batch: AttentionBatch, onOpen: () -> Unit, modifier: M
         colors = CardDefaults.cardColors(container, onContainer),
     ) {
         Column(Modifier.padding(16.dp)) {
-            IconTile(batch.category.icon(), onContainer.copy(alpha = 0.1f), onContainer)
+            ProductTile(photo, batch.category, onContainer.copy(alpha = 0.1f), onContainer)
             Spacer(Modifier.height(12.dp))
             Text(batch.name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(2.dp))

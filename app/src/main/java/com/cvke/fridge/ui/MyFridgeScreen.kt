@@ -73,6 +73,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import com.cvke.fridge.R
+import com.cvke.fridge.photo.ProductPhoto
 import com.cvke.fridge.core.Category
 import com.cvke.fridge.core.Freshness
 import com.cvke.fridge.inventory.InventoryAction
@@ -94,6 +95,7 @@ import com.cvke.fridge.ui.theme.Size
 @Composable
 fun MyFridgeScreen(
     state: FridgeUiState,
+    photos: Map<String, ProductPhoto>,
     filter: FoodFilter,
     onFilterChange: (FoodFilter) -> Unit,
     onAddFood: () -> Unit,
@@ -192,7 +194,13 @@ fun MyFridgeScreen(
                         }
                     }
                     else -> items(rows, key = { it.key }) { row ->
-                        FoodCard(row, onOpen = { onOpenFood(row.productId) }, onAction = { act(row, it) }, Modifier.padding(side))
+                        FoodCard(
+                            row,
+                            photos[row.productId],
+                            onOpen = { onOpenFood(row.productId) },
+                            onAction = { act(row, it) },
+                            Modifier.padding(side),
+                        )
                     }
                 }
             }

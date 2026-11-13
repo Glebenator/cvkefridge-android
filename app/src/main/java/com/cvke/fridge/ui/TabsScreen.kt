@@ -49,6 +49,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.cvke.fridge.R
+import com.cvke.fridge.photo.ProductPhoto
 import com.cvke.fridge.inventory.InventoryAction
 import com.cvke.fridge.reminder.ReminderSettings
 import com.cvke.fridge.ui.theme.Motion
@@ -89,6 +90,7 @@ enum class Tab(
  * notification ([showRequest]) opens My Fridge in the same way, with all storage areas, no search text, and the
  * freshness of the request.
  *
+ * @param photos The photo of each product that has one. The cards and the entries show it in the place of the icon.
  * @param onAddFood Opens the form that adds food. It gets the storage area of the tab of My Fridge that is open.
  * @param onScan Opens the scanner. It gets the storage area of the tab of My Fridge that is open.
  * @param onAddAgain Opens the form that adds a batch to a product that the person had before.
@@ -97,6 +99,7 @@ enum class Tab(
 @Composable
 fun TabsScreen(
     state: FridgeUiState,
+    photos: Map<String, ProductPhoto>,
     snackbar: SnackbarHostState,
     onAddFood: (openAreaId: String?) -> Unit,
     onScan: (openAreaId: String?) -> Unit,
@@ -170,6 +173,7 @@ fun TabsScreen(
                 when (tab) {
                     Tab.HOME -> HomeScreen(
                         state,
+                        photos = photos,
                         onViewAll = { showMyFridge(FoodFilter()) },
                         onShowFreshness = { showMyFridge(FoodFilter(freshness = setOf(it))) },
                         onAddFood = ::addFood,
@@ -185,6 +189,7 @@ fun TabsScreen(
                     )
                     Tab.MY_FRIDGE -> MyFridgeScreen(
                         state,
+                        photos = photos,
                         filter,
                         onFilterChange = { filter = it },
                         onAddFood = ::addFood,
@@ -197,6 +202,7 @@ fun TabsScreen(
                     )
                     Tab.HISTORY -> HistoryScreen(
                         state,
+                        photos = photos,
                         onOpenFood = onOpenFood,
                         onAddAgain = onAddAgain,
                         onTryAgain = onTryAgain,

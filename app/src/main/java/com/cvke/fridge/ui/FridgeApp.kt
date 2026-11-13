@@ -90,6 +90,7 @@ fun FridgeApp(viewModel: FridgeViewModel, pickPhoto: ActivityResultContract<Unit
             entry<Screen.Tabs> {
                 TabsScreen(
                     state = state,
+                    photos = photos,
                     snackbar = snackbar,
                     onAddFood = { open(Screen.AddFood(openAreaId = it)) },
                     onScan = { open(Screen.Scan(openAreaId = it)) },
