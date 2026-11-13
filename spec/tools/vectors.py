@@ -307,6 +307,8 @@ def check_foods(table, where):
         for kind, days in food["days"].items():
             if kind not in STORAGE_KINDS or not isinstance(days, int) or days < 1:
                 raise ValueError("%s: bad days for %s" % (where, food["id"]))
+        if food.get("usualKind", "fridge") not in STORAGE_KINDS:
+            raise ValueError("%s: bad usual storage kind for %s" % (where, food["id"]))
 
 
 # ---- The expected values of each vector file
@@ -368,10 +370,12 @@ def expect_food_table(data):
     check_foods(table, "foods.json")
     foods = table["foods"]
     step = max(1, len(foods) // 12)
-    samples = [{"foodId": food["id"], "name": food["name"], "category": food["category"], "days": food["days"]}
+    samples = [{"foodId": food["id"], "name": food["name"], "category": food["category"], "days": food["days"],
+                "usualKind": food.get("usualKind")}
                for food in foods[::step]]
     with_days = {kind: sum(1 for food in foods if kind in food["days"]) for kind in STORAGE_KINDS}
-    yield data, {"count": len(foods), "withDays": with_days, "samples": samples}
+    usual = {kind: sum(1 for food in foods if food.get("usualKind") == kind) for kind in STORAGE_KINDS}
+    yield data, {"count": len(foods), "withDays": with_days, "withUsualKind": usual, "samples": samples}
 
 
 FILES = {

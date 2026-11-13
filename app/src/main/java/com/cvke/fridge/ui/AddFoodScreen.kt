@@ -146,7 +146,7 @@ fun AddFoodScreen(
                 existing != null && screen.again ->
                     AddFoodForm.again(existing, AddAgain.values(ready.inventory, existing.id), area, separator)
                 existing != null -> AddFoodForm(name = existing.name, storageAreaId = area, barcode = scan?.barcode)
-                scan != null -> AddFoodForm.scanned(scan, area, separator)
+                scan != null -> AddFoodForm.scanned(scan, area, separator).withUsualArea(ready.foods, areas)
                 else -> AddFoodForm(storageAreaId = area)
             },
         )
@@ -236,7 +236,7 @@ fun AddFoodScreen(
             if (scan == null && screen.productId == null) ScanCard(onScan)
             OutlinedTextField(
                 value = form.name,
-                onValueChange = { form = form.withName(it, ready.foods) },
+                onValueChange = { form = form.withName(it, ready.foods, areas) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(nameFocus)
@@ -274,7 +274,7 @@ fun AddFoodScreen(
                     inStock = inStock,
                     title = if (recent) stringResource(R.string.suggestions_recent) else null,
                     onSelect = { suggestion ->
-                        val selected = form.withSuggestion(suggestion)
+                        val selected = form.withSuggestion(suggestion, ready.foods, areas)
                         // A product that the person had before gets its storage area and its usual quantity.
                         val product = (suggestion as? Suggestion.OfProduct)?.product?.takeIf { it.id !in inStock }
                         form = if (product == null) selected else selected.again(AddAgain.values(ready.inventory, product.id), separator)
@@ -318,7 +318,7 @@ fun AddFoodScreen(
             StorageAreaField(
                 areas = ready.content.areas,
                 selectedId = form.storageAreaId,
-                onSelect = { form = form.copy(storageAreaId = it) },
+                onSelect = { form = form.withArea(it) },
                 onManageAreas = onManageAreas,
                 error = form.checked && area == null,
             )
@@ -507,6 +507,8 @@ private val AddFoodFormSaver: Saver<AddFoodForm, Any> = listSaver(
             expiryInputText(form.expiry),
             form.checked,
             form.barcode,
+            form.areaKept,
+            form.startAreaId,
         )
     },
     restore = { saved ->
@@ -521,6 +523,8 @@ private val AddFoodFormSaver: Saver<AddFoodForm, Any> = listSaver(
             expiry = expiryInputOf(saved[7] as String),
             checked = saved[8] as Boolean,
             barcode = saved[9] as String?,
+            areaKept = saved[10] as Boolean,
+            startAreaId = saved[11] as String,
         )
     },
 )

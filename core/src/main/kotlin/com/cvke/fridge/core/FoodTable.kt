@@ -13,6 +13,8 @@ import kotlinx.serialization.json.intOrNull
  *
  * @property subtitle More text for the name, or null.
  * @property days The days that the food keeps, for each storage kind where it can be kept.
+ * @property usualKind The storage kind where people usually keep the food when they bring it home, or null. The food can
+ *   have no days for it. It gives no estimate.
  */
 data class Food(
     val id: String,
@@ -21,6 +23,7 @@ data class Food(
     val category: Category,
     val keywords: List<String>,
     val days: Map<StorageKind, Int>,
+    val usualKind: StorageKind? = null,
 )
 
 /**
@@ -46,7 +49,8 @@ data class FoodTable(val foods: List<Food>) {
     companion object {
         /**
          * Reads the format of `spec/foods.json`: an object with a `foods` array. Other top-level keys have no effect.
-         * `subtitle` and `keywords` can be absent. A `days` key that is not a storage kind is an error.
+         * `subtitle`, `keywords`, and `usualKind` can be absent. A `days` key or a `usualKind` that is not a storage kind
+         * is an error.
          *
          * @throws IllegalArgumentException when the text is not in this format.
          */
@@ -61,6 +65,7 @@ data class FoodTable(val foods: List<Food>) {
             val days = food["days"] as? JsonObject ?: fail("A food has no days object")
             val subtitle = food["subtitle"]
             val keywords = food["keywords"]
+            val usualKind = food["usualKind"]
             return Food(
                 id = text(food["id"], "id"),
                 name = text(food["name"], "name"),
@@ -76,6 +81,11 @@ data class FoodTable(val foods: List<Food>) {
                     val count = (value as? JsonPrimitive)?.takeUnless { it.isString }?.intOrNull
                         ?: fail("The days for $key are not a whole number")
                     kind to count
+                },
+                usualKind = if (usualKind == null || usualKind is JsonNull) {
+                    null
+                } else {
+                    text(usualKind, "usualKind").let { StorageKind.fromKey(it) ?: fail("Unknown storage kind: $it") }
                 },
             )
         }

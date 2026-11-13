@@ -17,6 +17,10 @@ The rules of the conversion:
   days.
 - "Package use-by date", "Indefinitely", "When Ripe", and "Not Recommended" give no days. The app then makes no
   estimate, and the person enters the printed date.
+- The usual storage kind ("usualKind") is the first kind of pantry, fridge, and freezer for which the source has a
+  time: a number, "Package use-by date", "When Ripe", or "Indefinitely". All the groups of the kind count, also
+  "after opening" and "after thawing". "Not Recommended" and a tip with no time do not count. A food of the
+  FoodKeeper category "Food Purchased Frozen" has the usual kind freezer. A food with no time has no usual kind.
 """
 import json
 import sys
@@ -54,6 +58,20 @@ GROUPS = {
     "freezer": ["DOP_Freeze", "Freeze"],
 }
 
+# The source groups that show that a food can be kept in a storage kind, for the usual storage kind. The order of the
+# keys is the order of preference.
+USUAL_GROUPS = {
+    "pantry": ["DOP_Pantry", "Pantry", "Pantry_After_Opening"],
+    "fridge": ["DOP_Refrigerate", "Refrigerate", "Refrigerate_After_Opening", "Refrigerate_After_Thawing"],
+    "freezer": ["DOP_Freeze", "Freeze"],
+}
+
+# The FoodKeeper Category_ID "Food Purchased Frozen".
+PURCHASED_FROZEN = 8
+
+# The metrics with no number that still give a time to keep the food.
+TIME_WORDS = {"package use-by date", "when ripe", "indefinitely"}
+
 
 def clean(text):
     """Text without space at the ends, and with the damaged character of the source file repaired."""
@@ -72,6 +90,21 @@ def days_of(row, group):
         return None
     days = int(value * DAYS_PER[metric.lower()])
     return days if days >= 1 else None
+
+
+def has_time(row, group):
+    """True when the group of the row gives a time to keep the food."""
+    metric = clean(row.get(group + "_Metric"))
+    if metric is None or metric.lower() == "not recommended":
+        return False
+    number = any(isinstance(row.get(group + end), (int, float)) for end in ("_Min", "_Max"))
+    return number or metric.lower() in TIME_WORDS
+
+
+def usual_kind(row):
+    if int(row["Category_ID"]) == PURCHASED_FROZEN:
+        return "freezer"
+    return next((kind for kind, groups in USUAL_GROUPS.items() if any(has_time(row, g) for g in groups)), None)
 
 
 def main():
@@ -104,6 +137,9 @@ def main():
                 keywords.append(word)
         food["keywords"] = keywords
         food["days"] = days
+        usual = usual_kind(row)
+        if usual:
+            food["usualKind"] = usual
         foods.append(food)
     foods.sort(key=lambda food: int(food["id"][3:]))
 

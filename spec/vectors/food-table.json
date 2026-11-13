@@ -1,11 +1,16 @@
 {
-  "description": "Facts about spec/foods.json: the number of foods, the number with days for each storage kind, and some foods. An app that reads the table must find the same.",
+  "description": "Facts about spec/foods.json: the number of foods, the number with days for each storage kind, the number with each usual storage kind, and some foods. An app that reads the table must find the same.",
   "expect": {
     "count": 661,
     "withDays": {
       "pantry": 290,
       "fridge": 363,
       "freezer": 339
+    },
+    "withUsualKind": {
+      "pantry": 331,
+      "fridge": 301,
+      "freezer": 29
     },
     "samples": [
       {
@@ -15,7 +20,8 @@
         "days": {
           "fridge": 30,
           "freezer": 180
-        }
+        },
+        "usualKind": "fridge"
       },
       {
         "foodId": "fk-58",
@@ -24,7 +30,8 @@
         "days": {
           "fridge": 3,
           "freezer": 120
-        }
+        },
+        "usualKind": "fridge"
       },
       {
         "foodId": "fk-119",
@@ -33,13 +40,15 @@
         "days": {
           "fridge": 1,
           "freezer": 270
-        }
+        },
+        "usualKind": "fridge"
       },
       {
         "foodId": "fk-179",
         "name": "Fruit, cut",
         "category": "leftovers",
-        "days": {}
+        "days": {},
+        "usualKind": "fridge"
       },
       {
         "foodId": "fk-237",
@@ -47,7 +56,8 @@
         "category": "other",
         "days": {
           "pantry": 1095
-        }
+        },
+        "usualKind": "pantry"
       },
       {
         "foodId": "fk-293",
@@ -57,7 +67,8 @@
           "pantry": 1,
           "fridge": 2,
           "freezer": 300
-        }
+        },
+        "usualKind": "pantry"
       },
       {
         "foodId": "fk-350",
@@ -65,7 +76,8 @@
         "category": "condiment",
         "days": {
           "pantry": 90
-        }
+        },
+        "usualKind": "pantry"
       },
       {
         "foodId": "fk-406",
@@ -73,7 +85,8 @@
         "category": "beverage",
         "days": {
           "pantry": 360
-        }
+        },
+        "usualKind": "pantry"
       },
       {
         "foodId": "fk-463",
@@ -81,7 +94,8 @@
         "category": "beverage",
         "days": {
           "pantry": 365
-        }
+        },
+        "usualKind": "pantry"
       },
       {
         "foodId": "fk-518",
@@ -90,7 +104,8 @@
         "days": {
           "fridge": 14,
           "freezer": 60
-        }
+        },
+        "usualKind": "fridge"
       },
       {
         "foodId": "fk-574",
@@ -99,7 +114,8 @@
         "days": {
           "pantry": 3,
           "fridge": 60
-        }
+        },
+        "usualKind": "pantry"
       },
       {
         "foodId": "fk-629",
@@ -108,7 +124,8 @@
         "days": {
           "fridge": 3,
           "freezer": 90
-        }
+        },
+        "usualKind": "fridge"
       },
       {
         "foodId": "fk-684",
@@ -117,7 +134,8 @@
         "days": {
           "pantry": 180,
           "freezer": 365
-        }
+        },
+        "usualKind": "pantry"
       }
     ]
   }

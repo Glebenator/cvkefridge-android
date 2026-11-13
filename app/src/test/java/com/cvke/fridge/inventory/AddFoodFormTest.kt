@@ -22,10 +22,10 @@ class AddFoodFormTest {
     private val pantry = StorageArea("pantry-1", "Pantry", StorageKind.PANTRY, fixed = false)
     private val areas = listOf(StorageArea.fridge, StorageArea.freezer, pantry)
 
-    private val butter = Food("f-butter", "Butter", null, Category.DAIRY, listOf("butter"), mapOf(StorageKind.FRIDGE to 30, StorageKind.FREEZER to 180))
+    private val butter = Food("f-butter", "Butter", null, Category.DAIRY, listOf("butter"), mapOf(StorageKind.FRIDGE to 30, StorageKind.FREEZER to 180), StorageKind.FRIDGE)
     private val hardCheese = Food("f-hard", "Cheese", "hard such as cheddar", Category.DAIRY, listOf("cheese", "cheddar"), mapOf(StorageKind.FRIDGE to 180))
     private val softCheese = Food("f-soft", "Cheese", "soft such as brie", Category.DAIRY, listOf("cheese", "brie"), mapOf(StorageKind.FRIDGE to 7))
-    private val peanutButter = Food("f-peanut", "Peanut butter", null, Category.CONDIMENT, listOf("peanut butter"), mapOf(StorageKind.PANTRY to 180))
+    private val peanutButter = Food("f-peanut", "Peanut butter", null, Category.CONDIMENT, listOf("peanut butter"), mapOf(StorageKind.PANTRY to 180), StorageKind.PANTRY)
     private val foods = FoodTable(listOf(butter, hardCheese, softCheese, peanutButter))
 
     private val milk = Product("p-milk", "Whole milk", Category.DAIRY, MeasureUnit.L, null, null)
@@ -37,7 +37,7 @@ class AddFoodFormTest {
 
     @Test
     fun aNameOfOneFoodGetsThatFoodAndItsCategory() {
-        val form = AddFoodForm().withName("butter", foods)
+        val form = AddFoodForm().withName("butter", foods, areas)
         assertEquals("f-butter", form.foodId)
         assertEquals(Category.DAIRY, form.category)
         // The date is the estimate for the Fridge. It is not today.
@@ -46,12 +46,12 @@ class AddFoodFormTest {
 
     @Test
     fun aNameOfMoreThanOneFoodGetsAFoodOnlyFromASuggestion() {
-        val typed = AddFoodForm().withName("Cheese", foods)
+        val typed = AddFoodForm().withName("Cheese", foods, areas)
         assertNull(typed.foodId)
         assertNull(typed.estimate(products, areas, foods, today))
         assertEquals(listOf("f-hard", "f-soft"), typed.suggestions(products, foods).map { (it as Suggestion.OfFood).food.id })
 
-        val selected = typed.withSuggestion(Suggestion.OfFood(softCheese))
+        val selected = typed.withSuggestion(Suggestion.OfFood(softCheese), foods, areas)
         assertEquals("Cheese", selected.name)
         assertEquals(estimated("2026-11-19"), selected.estimate(products, areas, foods, today))
         // The name is complete, so the list of suggestions closes.
@@ -60,21 +60,21 @@ class AddFoodFormTest {
 
     @Test
     fun theFoodStaysWhileTheNameFitsIt() {
-        val selected = AddFoodForm().withSuggestion(Suggestion.OfFood(hardCheese))
-        assertEquals("f-hard", selected.withName("Cheddar", foods).foodId)
-        assertNull(selected.withName("Bread", foods).foodId)
-        assertNull(selected.withName("", foods).foodId)
+        val selected = AddFoodForm().withSuggestion(Suggestion.OfFood(hardCheese), foods, areas)
+        assertEquals("f-hard", selected.withName("Cheddar", foods, areas).foodId)
+        assertNull(selected.withName("Bread", foods, areas).foodId)
+        assertNull(selected.withName("", foods, areas).foodId)
     }
 
     @Test
     fun aCategoryThatThePersonSelectedStays() {
-        val form = AddFoodForm(category = Category.LEFTOVERS, categoryChosen = true).withName("Butter", foods)
+        val form = AddFoodForm(category = Category.LEFTOVERS, categoryChosen = true).withName("Butter", foods, areas)
         assertEquals(Category.LEFTOVERS, form.category)
     }
 
     @Test
     fun aChangeOfTheStorageAreaGivesANewEstimateAndKeepsAPrintedDate() {
-        val form = AddFoodForm().withName("Butter", foods)
+        val form = AddFoodForm().withName("Butter", foods, areas)
         val frozen = form.copy(storageAreaId = "freezer")
         assertEquals(estimated("2027-05-11"), ExpiryChoice.expiry(frozen.expiry, frozen.estimate(products, areas, foods, today)))
         // The table has no days for butter in a pantry.
@@ -89,7 +89,7 @@ class AddFoodFormTest {
 
     @Test
     fun theNameOfAProductInTheInventoryAddsABatchToIt() {
-        val form = AddFoodForm(quantity = "1,5", unit = MeasureUnit.PCS, category = Category.OTHER).withName("  whole   MILK ", foods)
+        val form = AddFoodForm(quantity = "1,5", unit = MeasureUnit.PCS, category = Category.OTHER).withName("  whole   MILK ", foods, areas)
         val action = checkNotNull(form.action(products, areas, foods, today))
         assertEquals("p-milk", action.productId)
         assertEquals("Whole milk", action.name)
@@ -101,7 +101,7 @@ class AddFoodFormTest {
 
     @Test
     fun aNewFoodSavesTheCleanNameAndTheValuesOfTheForm() {
-        val form = AddFoodForm(quantity = "250", unit = MeasureUnit.G, storageAreaId = "pantry-1").withName(" Peanut  butter ", foods)
+        val form = AddFoodForm(quantity = "250", unit = MeasureUnit.G, storageAreaId = "pantry-1").withName(" Peanut  butter ", foods, areas)
         val action = checkNotNull(form.action(products, areas, foods, today))
         assertNull(action.productId)
         assertEquals("Peanut butter", action.name)
@@ -122,7 +122,7 @@ class AddFoodFormTest {
 
     @Test
     fun theNextFormKeepsOnlyTheStorageArea() {
-        val form = AddFoodForm(quantity = "3", storageAreaId = "freezer", checked = true).withName("Butter", foods)
+        val form = AddFoodForm(quantity = "3", checked = true).withName("Butter", foods, areas).withArea("freezer")
         assertEquals(AddFoodForm(storageAreaId = "freezer"), form.next())
     }
 
@@ -132,6 +132,44 @@ class AddFoodFormTest {
         assertEquals("freezer", AddFoodForm.startArea(null, "freezer", areas))
         assertEquals("freezer", AddFoodForm.startArea("deleted", "freezer", areas))
         assertEquals("fridge", AddFoodForm.startArea(null, null, areas))
+    }
+
+    @Test
+    fun aFoodSelectsAnAreaOfItsUsualStorageKindAndANameWithNoFoodGoesBackToTheStartArea() {
+        // The last batch went to the freezer. Butter goes to the fridge, and peanut butter to the pantry.
+        val start = AddFoodForm(storageAreaId = "freezer")
+        val withButter = start.withName("Butter", foods, areas)
+        assertEquals("fridge", withButter.storageAreaId)
+        assertEquals("pantry-1", start.withSuggestion(Suggestion.OfFood(peanutButter), foods, areas).storageAreaId)
+        assertEquals("freezer", withButter.withName("Bread", foods, areas).storageAreaId)
+        // Cheese has no usual storage kind.
+        assertEquals("freezer", start.withSuggestion(Suggestion.OfFood(softCheese), foods, areas).storageAreaId)
+    }
+
+    @Test
+    fun theStartAreaStaysWhenItHasTheUsualKindAndAKindWithNoAreaKeepsTheStartArea() {
+        val garage = StorageArea("garage", "Garage fridge", StorageKind.FRIDGE, fixed = false)
+        val withGarage = areas + garage
+        assertEquals("garage", AddFoodForm(storageAreaId = "garage").withName("Butter", foods, withGarage).storageAreaId)
+        assertEquals("fridge", AddFoodForm(storageAreaId = "freezer").withName("Butter", foods, withGarage).storageAreaId)
+        // The fixed area of a kind comes before an area that the person made.
+        assertEquals("fridge", AddFoodForm.areaOfKind(StorageKind.FRIDGE, "pantry-1", listOf(garage, StorageArea.fridge)))
+        // No pantry: peanut butter stays in the start area.
+        val noPantry = listOf(StorageArea.fridge, StorageArea.freezer)
+        assertEquals("freezer", AddFoodForm(storageAreaId = "freezer").withName("Peanut butter", foods, noPantry).storageAreaId)
+    }
+
+    @Test
+    fun anAreaThatThePersonSelectedStaysWhenTheFoodChanges() {
+        val form = AddFoodForm().withArea("freezer").withName("Peanut butter", foods, areas)
+        assertEquals("freezer", form.storageAreaId)
+        assertEquals("freezer", form.withName("Butter", foods, areas).storageAreaId)
+    }
+
+    @Test
+    fun aScanWithAFoodGetsTheAreaOfItsUsualStorageKind() {
+        val scan = Scanned("1", ScanSource.FOUND, "Skippy", "condiment", "f-peanut")
+        assertEquals("pantry-1", AddFoodForm.scanned(scan, "fridge", '.').withUsualArea(foods, areas).storageAreaId)
     }
 
     @Test

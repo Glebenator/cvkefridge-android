@@ -24,6 +24,8 @@ class FoodTableVectorsTest {
         assertEquals(expect.getValue("count"), SpecFiles.element(table.foods.size))
         val withDays = StorageKind.entries.associate { kind -> kind.key to table.foods.count { kind in it.days } }
         assertEquals(expect.getValue("withDays"), SpecFiles.element(JsonObject(withDays.mapValues { SpecFiles.element(it.value) })))
+        val usual = StorageKind.entries.associate { kind -> kind.key to table.foods.count { it.usualKind == kind } }
+        assertEquals(expect.getValue("withUsualKind"), SpecFiles.element(JsonObject(usual.mapValues { SpecFiles.element(it.value) })))
 
         val samples = expect.getValue("samples").jsonArray.map { it.jsonObject }
         assertTrue("$file has no samples", samples.isNotEmpty())
@@ -31,7 +33,13 @@ class FoodTableVectorsTest {
             val food = table.food(sample.str("foodId"))
             assertNotNull("$file: the food ${sample.str("foodId")} is missing", food)
             val days = JsonObject(food!!.days.entries.associate { it.key.key to SpecFiles.element(it.value) })
-            val actual = json("foodId" to food.id, "name" to food.name, "category" to food.category.key, "days" to days)
+            val actual = json(
+                "foodId" to food.id,
+                "name" to food.name,
+                "category" to food.category.key,
+                "days" to days,
+                "usualKind" to food.usualKind?.key,
+            )
             assertEquals("$file, sample ${food.id}", sample, actual)
         }
     }
@@ -43,11 +51,18 @@ class FoodTableVectorsTest {
     }
 
     @Test
+    fun aUsualKindThatIsNotAStorageKindIsAnError() {
+        val text = "{\"foods\":[{\"id\":\"a\",\"name\":\"A\",\"category\":\"dairy\",\"days\":{},\"usualKind\":\"shelf\"}]}"
+        assertThrows(IllegalArgumentException::class.java) { FoodTable.decode(text) }
+    }
+
+    @Test
     fun subtitleAndKeywordsCanBeAbsent() {
         val text = "{\"other\":1,\"foods\":[{\"id\":\"a\",\"name\":\"A\",\"category\":\"dairy\",\"days\":{\"fridge\":3}}]}"
         val food = FoodTable.decode(text).food("a")
         assertNotNull(food)
         assertNull(food!!.subtitle)
         assertEquals(emptyList<String>(), food.keywords)
+        assertNull(food.usualKind)
     }
 }

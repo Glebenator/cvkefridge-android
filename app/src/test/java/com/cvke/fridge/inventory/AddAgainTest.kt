@@ -60,7 +60,7 @@ class AddAgainTest {
     )
 
     private val foods = FoodTable(
-        listOf(Food("f-milk", "Milk", null, Category.DAIRY, emptyList(), mapOf(StorageKind.FRIDGE to 7, StorageKind.FREEZER to 90))),
+        listOf(Food("f-milk", "Milk", null, Category.DAIRY, emptyList(), mapOf(StorageKind.FRIDGE to 7, StorageKind.FREEZER to 90), StorageKind.FRIDGE)),
     )
 
     @Test
@@ -120,7 +120,7 @@ class AddAgainTest {
     @Test
     fun aRecentFoodThatThePersonSelectsGetsItsValues() {
         val form = AddFoodForm(storageAreaId = "fridge", quantity = "3", expiry = ExpiryInput.None)
-            .withSuggestion(Suggestion.OfProduct(inventory.products.single { it.id == "milk" }))
+            .withSuggestion(Suggestion.OfProduct(inventory.products.single { it.id == "milk" }), foods, inventory.storageAreas)
             .again(AddAgain.values(inventory, "milk"), '.')
         assertEquals(Triple("Milk", "freezer", "1"), Triple(form.name, form.storageAreaId, form.quantity))
         assertEquals(ExpiryInput.Suggested, form.expiry)

@@ -9,6 +9,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
@@ -64,6 +65,34 @@ class InventoryChangesDeviceTest : DeviceTest() {
         assertEquals(ExpirySource.ESTIMATED, batch.expiry?.source)
         assertNotEquals(today(), batch.expiry?.date)
         assertEquals(emptyList<Any>(), inventory.rejected)
+    }
+
+    @Test
+    fun aFoodOfTheTableGoesToAnAreaOfItsUsualStorageKind() {
+        start(emptyList())
+        rule.onNodeWithTag("add_food").performClick()
+        waitFor(hasTestTag("add_food_screen"))
+
+        // The person puts the first food in the freezer. The next form starts in the freezer.
+        rule.onNodeWithTag("field_storage_area").performScrollTo().performClick()
+        rule.onNodeWithTag("area_option_freezer").performClick()
+        rule.onNodeWithTag("field_name").performTextInput("Rice")
+        rule.onNodeWithTag("save_another").performClick()
+        waitFor(hasText("Rice added"))
+        waitUntilGone(hasTestTag("field_name") and hasText("Rice"))
+        rule.onNodeWithTag("field_storage_area").assertTextContains("Freezer")
+
+        // Butter is usually kept in the fridge.
+        rule.onNodeWithTag("field_name").performTextInput("but")
+        waitFor(hasTestTag("suggestion_food_fk-1"))
+        rule.onNodeWithTag("suggestion_food_fk-1").performClick()
+        rule.onNodeWithTag("field_storage_area").assertTextContains("Fridge")
+        rule.onNodeWithTag("save").performClick()
+        waitUntilGone(hasTestTag("add_food_screen"))
+
+        val inventory = inventory()
+        fun areaOf(name: String) = inventory.batches.single { it.productId == inventory.products.single { p -> p.name == name }.id }.storageAreaId
+        assertEquals("freezer" to "fridge", areaOf("Rice") to areaOf("Butter"))
     }
 
     @Test

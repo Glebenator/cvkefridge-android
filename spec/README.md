@@ -43,7 +43,7 @@ Each case is a JSON object. Its `expect` value is the expected result. All other
 | `use-first.json` | 5 | |
 | `plan-use.json` | 6 | |
 | `change-log.json` | 7 | Each case is a full log and the result of its replay |
-| `food-table.json` | 4 | Facts about `foods.json`: the count and some foods. It proves that an app reads the whole table. |
+| `food-table.json` | 4 | Facts about `foods.json`: the count, the usual storage kinds, and some foods. It proves that an app reads the whole table. |
 
 Dates are text in the form `YYYY-MM-DD`. Quantities are whole thousandths. Instants are whole milliseconds from
 1970-01-01T00:00:00Z. A value of `null` means that there is no value.

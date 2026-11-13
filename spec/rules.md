@@ -51,6 +51,9 @@ that is a defect in this folder. Correct it here first.
   source is `estimated`.
 - If the food is not in the table, or the food has no days for that kind, there is no estimate. The core does not use
   the category to make an estimate.
+- A food can have a **usual storage kind**: the storage kind where people usually keep the food when they bring it home.
+  It can be absent. It can be a kind for which the food has no days, for example milk that keeps until the date on the
+  package. `tools/build-foods.py` has the rule that sets it. The usual storage kind gives no estimate.
 
 ## 5. Batches and the use-first order
 

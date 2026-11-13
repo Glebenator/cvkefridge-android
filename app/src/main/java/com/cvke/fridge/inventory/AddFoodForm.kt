@@ -8,6 +8,7 @@ import com.cvke.fridge.core.FoodTable
 import com.cvke.fridge.core.MeasureUnit
 import com.cvke.fridge.core.Product
 import com.cvke.fridge.core.StorageArea
+import com.cvke.fridge.core.StorageKind
 import com.cvke.fridge.lookup.Scanned
 
 /** Why a name in a form is not good. */
@@ -20,6 +21,9 @@ enum class NameError { EMPTY, TOO_LONG, IN_USE }
  * @property foodId The food of the table of foods that gives the expiry estimate, or null.
  * @property categoryChosen True after the person selected the category. A food then does not change it.
  * @property quantity The text of the quantity field.
+ * @property areaKept True when a food does not change the storage area: the person selected it, or it is the storage
+ *   area of the newest batch of the product.
+ * @property startAreaId The storage area of the form when the food has no usual storage kind.
  * @property checked True after the person selected "Save" one time. The form then shows the problem of each field.
  * @property barcode The barcode of a scan, or null. The form shows it but does not let the person change it.
  */
@@ -31,6 +35,8 @@ data class AddFoodForm(
     val quantity: String = DEFAULT_QUANTITY,
     val unit: MeasureUnit? = MeasureUnit.PCS,
     val storageAreaId: String = StorageArea.fridge.id,
+    val areaKept: Boolean = false,
+    val startAreaId: String = storageAreaId,
     val expiry: ExpiryInput = ExpiryInput.Suggested,
     val checked: Boolean = false,
     val barcode: String? = null,
@@ -47,22 +53,40 @@ data class AddFoodForm(
     /**
      * The form after the person typed in the name field. The food of the form stays while the name fits it. A name
      * that only one food of the table has gets that food. A food gives its category, if the person did not select one.
+     * A change of the food gives the storage area of the food ([withUsualArea]).
      */
-    fun withName(text: String, foods: FoodTable): AddFoodForm {
+    fun withName(text: String, foods: FoodTable, areas: List<StorageArea>): AddFoodForm {
         val kept = foodId?.let(foods::food)?.takeIf { FoodSuggestions.fits(it, text) }
         val food = kept ?: FoodSuggestions.onlyFoodNamed(text, foods)
         return copy(name = text, foodId = food?.id, category = if (categoryChosen || food == null) category else food.category)
+            .afterFoodOf(this, foods, areas)
     }
 
-    /** The form after the person selected a suggestion. */
-    fun withSuggestion(suggestion: Suggestion): AddFoodForm = when (suggestion) {
+    /** The form after the person selected a suggestion. A change of the food gives the storage area of the food. */
+    fun withSuggestion(suggestion: Suggestion, foods: FoodTable, areas: List<StorageArea>): AddFoodForm = when (suggestion) {
         is Suggestion.OfProduct -> copy(name = suggestion.product.name, foodId = suggestion.product.foodId)
         is Suggestion.OfFood -> copy(
             name = suggestion.food.name,
             foodId = suggestion.food.id,
             category = if (categoryChosen) category else suggestion.food.category,
         )
+    }.afterFoodOf(this, foods, areas)
+
+    private fun afterFoodOf(before: AddFoodForm, foods: FoodTable, areas: List<StorageArea>): AddFoodForm =
+        if (foodId == before.foodId) this else withUsualArea(foods, areas)
+
+    /**
+     * The form with the storage area for its food: an area of the usual storage kind of the food ([areaOfKind]). With
+     * no such area, or no usual storage kind, it is the start area. When [areaKept] is true, the form does not change.
+     */
+    fun withUsualArea(foods: FoodTable, areas: List<StorageArea>): AddFoodForm {
+        if (areaKept) return this
+        val kind = foodId?.let(foods::food)?.usualKind
+        return copy(storageAreaId = kind?.let { areaOfKind(it, startAreaId, areas) } ?: startAreaId)
     }
+
+    /** The form after the person selected a storage area. A food then does not change it. */
+    fun withArea(id: String): AddFoodForm = copy(storageAreaId = id, areaKept = true)
 
     /** The suggestions for the name. A name that is complete has none: the name of a product, or of the food of the form. */
     fun suggestions(products: List<Product>, foods: FoodTable): List<Suggestion> {
@@ -112,6 +136,7 @@ data class AddFoodForm(
      */
     fun again(values: AgainValues, decimalSeparator: Char): AddFoodForm = copy(
         storageAreaId = values.storageAreaId ?: storageAreaId,
+        areaKept = areaKept || values.storageAreaId != null,
         quantity = values.quantity?.let { QuantityText.format(it, decimalSeparator) } ?: quantity,
         expiry = ExpiryInput.Suggested,
     )
@@ -162,5 +187,14 @@ data class AddFoodForm(
          */
         fun startArea(lastUsedId: String?, openTabId: String?, areas: List<StorageArea>): String =
             listOfNotNull(lastUsedId, openTabId).firstOrNull { id -> areas.any { it.id == id } } ?: StorageArea.fridge.id
+
+        /**
+         * The storage area for a food of the usual storage kind [kind]: the start area if it has that kind, then the
+         * fixed area of that kind, and then the first area of that kind. It is null when no area has that kind.
+         */
+        fun areaOfKind(kind: StorageKind, startAreaId: String, areas: List<StorageArea>): String? {
+            val ofKind = areas.filter { it.kind == kind }
+            return (ofKind.firstOrNull { it.id == startAreaId } ?: ofKind.firstOrNull { it.fixed } ?: ofKind.firstOrNull())?.id
+        }
     }
 }
