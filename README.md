@@ -3,8 +3,8 @@
 [![Android CI](https://github.com/Glebenator/cvkefridge-android/actions/workflows/android.yml/badge.svg?branch=main)](https://github.com/Glebenator/cvkefridge-android/actions/workflows/android.yml?query=branch%3Amain)
 
 A native Android app for food inventory in the fridge. It keeps the inventory on one phone: a person scans a barcode
-or adds food by hand, edits it, and records it as used or as thrown away. It uses Kotlin, Jetpack Compose, and
-Material 3.
+or adds food by hand, edits it, records it as used or as thrown away, and sees the history. It uses Kotlin, Jetpack
+Compose, and Material 3.
 
 CVKE Fridge has three repositories:
 
@@ -37,7 +37,10 @@ CVKE Fridge has three repositories:
   [Reminders](#reminders).
 - **The screen of a food.** A tap on a card opens the product with its batches in the use-first order. The person can
   edit the product (name, category, unit) and each batch (quantity, storage area, date added, expiry date), and add
-  a batch.
+  a batch. Below the batches is the history of the food. The product can have a photo. See [History, add again, and
+  the product photo](#history-add-again-and-the-product-photo).
+- **History.** The third tab shows what was used and what was thrown away, with a summary. See
+  [History, add again, and the product photo](#history-add-again-and-the-product-photo).
 - **Used and thrown away, with undo.** A swipe on a card records the oldest batch as used (to the end) or as thrown
   away (to the start). The menu of a card and the screen of a food record a quantity that the person types. The
   quantity comes from the oldest batch first. Each of these actions, each delete, and each add shows a snackbar with
@@ -48,8 +51,8 @@ CVKE Fridge has three repositories:
   person becomes changes with random identifiers. The app runs the replay before the write, and it does not write a
   change that the core rejects. A write that fails leaves a form as it is, with a message. The table of foods is
   `spec/foods.json`: the build copies it into the assets.
-- **Navigation.** Jetpack Navigation 3 keeps the back stack. The two tabs are the first screen, and the other screens
-  open above them with no navigation bar.
+- **Navigation.** Jetpack Navigation 3 keeps the back stack. The three tabs (Home, My Fridge, and History) are the
+  first screen, and the other screens open above them with no navigation bar.
 - **Application ID.** The application ID is `com.cvke.fridge`. The debug build has the ID `com.cvke.fridge.debug` and the name
   CVKE Fridge Debug, so it can be on the same phone as the Play build.
 - **CI.** The badge above shows the result of the newest run on `main`. Select it to see all runs.
@@ -117,6 +120,80 @@ The reports are in the artifacts `android-reports` and `android-device-reports` 
   and its check digit (`Barcodes`), the category from the tags of Open Food Facts, the food that a name clearly names,
   the name with the brand, the quantity of a package (`ProductMapping.kt`), and one barcode for one product
   (`InventoryActions`).
+
+## History, add again, and the product photo
+
+- **Where History is.** History is the third tab of the navigation bar, after Home and My Fridge. It is a destination
+  at the top level: it shows all food that ended, not a part of one food or of one screen. The Material navigation bar
+  is for three to five destinations of the same importance, and a destination in a menu or in Settings is hard to
+  find. The settings button of Home stays for the settings. Home and My Fridge do not change. The two floating buttons
+  that add food are not on History, because a floating action button is for the main action of a screen, and the main
+  action of History is in each entry. They grow and shrink when the person goes to History and back.
+- **The list.** One entry for each use and each throw away, the newest first, with a header for each day: "Today",
+  "Yesterday", or the date. An entry has the photo or the category icon, the name, the quantity with its unit, and the
+  outcome in words with its icon: the outcome is never only a colour. Screen readers hear an entry as one item, for
+  example "Whole milk, 1 l, Used, Today". A tap opens the screen of the food. Three Material segmented buttons show all
+  entries, the used food, or the thrown-away food. They stay at the top of the screen while the list scrolls. A delete
+  is for a mistake, so a deleted batch or product is not in the history (rule 7.2 of the shared specification).
+- **The summary.** A card at the top counts the batches that were used and the batches that were thrown away in this
+  month, the last month, or all of the history, with the quantities: one sum for each unit, so 1 l and 500 g are not
+  added. A batch with two entries counts one time. A batch that was partly used and partly thrown away counts for each
+  of the two outcomes. The card also names the three foods with the most thrown-away batches. It has counts and
+  quantities only: the app has no prices, so it does not show money or other values. A month is a calendar month on
+  the phone. With no entry in the period, the card says so.
+- **Empty, loading, and failure.** With no history, the screen says "Nothing used or thrown away yet", and it says when
+  entries come. A filter with no entry says "Nothing used yet" or "Nothing thrown away yet". While the change log
+  loads, the screen shows the spinner. When the log cannot be read, it says so and has "Try again".
+- **Speed.** The view model calculates the list and the summaries off the main thread, together with the content of
+  Home and My Fridge, so History is ready when it opens. The list is lazy. With a change log of 3000 ended batches,
+  History opened at once on the emulator, and it scrolled with the same frame times as My Fridge with the sample. The
+  emulator draws with an emulated GPU and the build was the debug build, so this test does not show the frame times
+  of a phone.
+- **The history of one food.** The screen of a food shows its history below its batches: for each outcome the
+  quantity and the number of batches, the first five entries, and "Show all".
+- **Add again.** Each history entry has a button that adds the food again, and screen readers have "Add again" as an
+  action of the entry. The core keeps a product when all its batches end, so the screen of such a food says "You have
+  none of this food now" and has "Add again". "Add again" and "Add a batch" open the add form with the name of the
+  product, the storage area of its newest batch (when that storage area is still there), the quantity that most of its
+  batches had when they were added, and the estimated date from today. The form never takes a date of an earlier
+  batch. A food with no estimate has no expiry date in the form, and the person can enter the printed date. The new
+  batch goes to the same product: the app makes no second product.
+- **Recent foods.** An empty name field of the add form suggests the three foods that the person had before and has
+  none of now, the last one first, below the word "Recent". In the other suggestions, such a food says "You had this
+  before". A selected recent food gets its storage area and its usual quantity. A form after a scan does not show
+  recent foods.
+- **The product photo.** "Add a photo" on the screen of a food opens the photo picker of Android
+  (`ActivityResultContracts.PickVisualMedia`, pictures only). The picker gives the app only the picture that the
+  person selects, so the app needs no storage permission. On a phone with no photo picker, Android opens its document
+  picker, which also needs no permission. The app does not take a picture with the camera app: the manifest declares
+  the camera permission for the scanner, and Android then refuses `ACTION_IMAGE_CAPTURE` until the person allows the
+  camera. The picker asks for nothing.
+- **The photo file.** The app reads the picture one time, off the main thread, and keeps no reference to it.
+  `ImageDecoder` turns the picture as its EXIF orientation says and decodes it with its longest edge at 1024 pixels,
+  so a very large picture needs little memory. The app writes it as a JPEG (quality 85) with no metadata, so the
+  location and the time of the picture do not go into it. The file is `photos/<product>.<random>.jpg` in the private
+  files of the app. Backup is off, so the photos stay on the phone, and the app never sends them. The picker result
+  also arrives after Android stopped the app while the picker was open. While the app makes the photo, the screen says
+  "Adding the photo". A picture that cannot be read gives a message, and the product keeps its photo.
+- **Change, remove, and delete.** The photo is at the top of the screen of the food, with "Change photo" and "Remove
+  photo". A remove has "Undo". A removed photo, and the photo of a deleted product, stay in the folder while the
+  message with "Undo" is on the screen, so that "Undo" brings them back. When the message closes, and at each start,
+  the app deletes the files that no product needs: removed photos, photos of products that are not in the inventory,
+  older photos of a product, and files of a write that stopped.
+- **Thumbnails.** The cards of My Fridge, the cards of Home that need attention, the entries of History, and the
+  foods that were thrown away most often show the photo in the place of the category icon. The icon shows while the
+  photo loads and when the product has no photo. A photo is decorative, because the name of the food is next to it.
+- **The loader.** A small loader of the app decodes each photo with a sample size for the size on the screen, off the
+  main thread, and keeps the results in an `LruCache` of an eighth of the memory of the app. A photo in the cache is
+  there in the first frame. The app does not use Coil: the photos are its own JPEGs of not more than 1024 pixels on
+  the phone, so one decode with a sample size and a cache do the work, with no new library and no network code.
+- **Rules for the shared specification.** The shared specification has no rules for this piece yet. These rules are
+  in plain Kotlin with unit tests, and they must go into `spec/` of the cvkefridge repository, so that the iOS app
+  gives the same results: the order, the day headers, the filter, the periods, the summary, and the ranking of the
+  thrown-away foods (`history/HistoryContent`), the values of "Add again" and the list of recent foods
+  (`inventory/AddAgain`), and the photo of a product. The `Product` of the core has no photo, as the glossary says it
+  can have, so the app keeps the photo in its own folder by the identifier of the product (`photo/PhotoFiles`). A
+  photo is not in the change log yet.
 
 ## Reminders
 
@@ -222,10 +299,14 @@ Google Play needs an Android App Bundle (AAB) signed with an upload key. Without
   Open Food Facts and the request (`OpenFoodFactsTest`, with answers of the API in `src/test/resources/openfoodfacts`),
   the name, the category, the food, and the quantity of a looked-up product (`ProductMappingTest`), and the cache and
   the limit of requests (`ProductLookupTest`). `ScanDebouncerTest` checks which reads of the camera count. The tests in
-  `reminder/` check which batches are in a reminder (`ReminderRulesTest`), its text with the English string resources
-  and their plurals (`ReminderTextTest`), the dates and the instants of the schedule across midnight, daylight saving
-  time, and time zone changes (`ReminderScheduleTest`), the default settings and their file (`ReminderSettingsTest`),
-  and the notification access (`NotificationAccessTest`).
+  `history/` check the order, the days, the filter, the periods, the summary, and the thrown-away foods of the
+  history (`HistoryContentTest`). `AddAgainTest` checks the values of "Add again", the recent foods, and the form that
+  they make. The tests in `photo/` check the names of the photo files, the files that no product needs, the sizes
+  (`PhotoFilesTest`), and the save, remove, undo, new read, and cleanup of the photo store in a folder of the computer
+  (`PhotoStoreTest`). The tests in `reminder/` check which batches are in a reminder (`ReminderRulesTest`), its text
+  with the English string resources and their plurals (`ReminderTextTest`), the dates and the instants of the schedule
+  across midnight, daylight saving time, and time zone changes (`ReminderScheduleTest`), the default settings and their
+  file (`ReminderSettingsTest`), and the notification access (`NotificationAccessTest`).
 
   ```sh
   ./gradlew :app:testDebugUnitTest
@@ -237,13 +318,18 @@ Google Play needs an Android App Bundle (AAB) signed with an upload key. Without
   area. It reads the screen and the replay of the change log on the device. `BarcodeDeviceTest` goes from a typed
   barcode to a saved food through the scanner, the lookup, and the form, and checks "not found" and "no connection".
   The test runner (`DeviceTestRunner`) gives the app a fake server in the place of the internet, so the device tests
-  never call Open Food Facts. `BarcodeReaderDeviceTest` draws barcodes in a picture and reads them with the ML Kit
-  model of the app. `ReminderDeviceTest` goes from the offer on Home through the explanation to the question of
-  Android, closes it with no answer, and turns reminders on through the settings of Android. It changes the settings
-  and starts the app again, runs the work of the alarm with the real change log, and checks the notification and a tap
-  on it. A test cannot take the notification permission away (Android then stops the test), so the first test needs
-  a new install: remove the debug app before you run the device tests on your own device. Gradle removes the debug
-  app from the device after these tests, with its change log.
+  never call Open Food Facts. `HistoryDeviceTest` records food as used and as thrown away and finds it in History
+  with its outcome, uses the filter, adds a food again from a history entry and reads the new batch in the change log,
+  and gives a product a photo, finds it again after a restart, removes it with undo, and waits until its file is gone.
+  The test runner gives the app a source of a picture with no screen (`TestPhotoPicker`), so the device tests do not
+  drive the photo picker of Android. `BarcodeReaderDeviceTest` draws barcodes in a picture and reads them with the ML
+  Kit model of the app. `ReminderDeviceTest` goes from the offer on Home through the explanation to the question of
+  Android, closes it with no answer, and turns reminders on through the settings of Android. While it waits for a
+  window of Android, it closes a dialog of the system about another app, for example "Play Store keeps stopping". It
+  changes the settings and starts the app again, runs the work of the alarm with the real change log, and checks the
+  notification and a tap on it. A test cannot take the notification permission away (Android then stops the test), so
+  the first test needs a new install: remove the debug app before you run the device tests on your own device. Gradle
+  removes the debug app from the device after these tests, with its change log and its photos.
 
   ```sh
   ./gradlew :app:connectedDebugAndroidTest
@@ -261,7 +347,9 @@ adb shell am start -S -n com.cvke.fridge.debug/com.cvke.fridge.MainActivity --es
 
 `-S` stops the app before the start. Without it, Android does not give the request to an app that is open.
 
-Each date of the sample is a number of days from today, so the app calculates the days left as for real food.
+Each date of the sample is a number of days from today, so the app calculates the days left as for real food. The
+sample also has a history of the last five weeks: food that was used and thrown away, and five foods that the person
+had before and has none of now. It has no photos: the photos stay on the phone.
 
 ## Project structure
 
@@ -275,8 +363,10 @@ app/src/main/java/com/cvke/fridge/
   MainActivity.kt                             The only activity, with edge-to-edge display
   FridgeApplication.kt                        The objects that live as long as the app
   data/                                       The change log, the identifier of the phone, and the HTTPS client
-  inventory/                                  The actions, the forms, and their checks, in plain Kotlin
+  history/                                    The list and the summary of the history, in plain Kotlin
+  inventory/                                  The actions, the forms, "Add again", and their checks, in plain Kotlin
   lookup/                                     Barcodes, the product lookup, its cache, and the values of a scan
+  photo/                                      The product photos: the picker, the file rules, the store, and the loader
   reminder/                                   The daily reminder: its rules, its settings, the alarm, and the notification
   scan/                                       The camera and the barcode reader of the scanner
   ui/                                         The screens, the back stack, and the view model
