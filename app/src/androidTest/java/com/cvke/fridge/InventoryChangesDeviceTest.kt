@@ -182,13 +182,14 @@ class InventoryChangesDeviceTest : DeviceTest() {
         rule.onNode(yoghurt).performClick()
         waitFor(hasTestTag("food_screen"))
 
-        rule.onNodeWithTag("food_add_note").performClick()
-        rule.onNodeWithTag("food_note_field").performTextInput("  For the cake  ")
-        rule.onNodeWithTag("food_note_save").performClick()
+        // On a small screen the keyboard can cover the buttons below the field, so the test scrolls to each one.
+        rule.onNodeWithTag("food_add_note").performScrollTo().performClick()
+        rule.onNodeWithTag("food_note_field").performScrollTo().performTextInput("  For the cake  ")
+        rule.onNodeWithTag("food_note_save").performScrollTo().performClick()
 
         // The screen shows the note, and the change log has it without the spaces at the ends.
         waitFor(hasTestTag("food_note"))
-        rule.onNodeWithText("For the cake").assertIsDisplayed()
+        rule.onNodeWithTag("food_note").performScrollTo().assertTextContains("For the cake")
         assertEquals("For the cake", inventory().products.single { it.id == "sample-yoghurt" }.note)
 
         // The card on My Fridge shows the note.
@@ -202,7 +203,7 @@ class InventoryChangesDeviceTest : DeviceTest() {
         waitFor(hasTestTag("food_screen"))
         rule.onNodeWithTag("edit_food").performClick()
         waitFor(hasTestTag("edit_food_screen"))
-        rule.onNodeWithTag("field_note").performTextReplacement(" ")
+        rule.onNodeWithTag("field_note").performScrollTo().performTextReplacement(" ")
         rule.onNodeWithTag("save").performClick()
         waitFor(hasTestTag("food_add_note"))
         assertEquals(null, inventory().products.single { it.id == "sample-yoghurt" }.note)

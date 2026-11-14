@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -40,6 +42,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import com.cvke.fridge.R
 import com.cvke.fridge.inventory.Notes
+import kotlinx.coroutines.delay
 
 /**
  * The note of a product on the screen of the food. A product with a note shows it in a card, and a tap on the card
@@ -55,31 +58,43 @@ fun FoodNote(productId: String, note: String?, onSave: (String?) -> Unit, modifi
     var draft by rememberSaveable(productId) { mutableStateOf("") }
     val scheme = MaterialTheme.colorScheme
     when {
-        editing -> Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        editing -> {
             val focus = remember { FocusRequester() }
-            LaunchedEffect(Unit) { focus.requestFocus() }
-            OutlinedTextField(
-                value = draft,
-                onValueChange = { draft = it },
-                modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("food_note_field"),
-                label = { Text(stringResource(R.string.field_note)) },
-                placeholder = { Text(stringResource(R.string.field_note_placeholder)) },
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                minLines = 3,
-            )
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
-                TextButton(onClick = { editing = false }, Modifier.testTag("food_note_cancel")) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-                Button(
-                    onClick = {
-                        editing = false
-                        val cleaned = Notes.clean(draft)
-                        if (cleaned != note) onSave(cleaned)
-                    },
-                    Modifier.testTag("food_note_save"),
-                ) {
-                    Text(stringResource(R.string.action_save))
+            val editor = remember { BringIntoViewRequester() }
+            LaunchedEffect(Unit) {
+                focus.requestFocus()
+                // On a small screen the keyboard can cover "Save" and "Cancel". After the keyboard opens, the list
+                // shows the field and the buttons.
+                delay(KEYBOARD_MILLIS)
+                editor.bringIntoView()
+            }
+            Column(
+                modifier.fillMaxWidth().bringIntoViewRequester(editor),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedTextField(
+                    value = draft,
+                    onValueChange = { draft = it },
+                    modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("food_note_field"),
+                    label = { Text(stringResource(R.string.field_note)) },
+                    placeholder = { Text(stringResource(R.string.field_note_placeholder)) },
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    minLines = 3,
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+                    TextButton(onClick = { editing = false }, Modifier.testTag("food_note_cancel")) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                    Button(
+                        onClick = {
+                            editing = false
+                            val cleaned = Notes.clean(draft)
+                            if (cleaned != note) onSave(cleaned)
+                        },
+                        Modifier.testTag("food_note_save"),
+                    ) {
+                        Text(stringResource(R.string.action_save))
+                    }
                 }
             }
         }
@@ -121,3 +136,6 @@ fun FoodNote(productId: String, note: String?, onSave: (String?) -> Unit, modifi
         }
     }
 }
+
+/** The time for the keyboard to open, before the note editor comes into view. */
+private const val KEYBOARD_MILLIS = 350L
