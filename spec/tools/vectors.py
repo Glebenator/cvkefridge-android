@@ -142,7 +142,9 @@ def replay(changes):
         body = change["body"]
         kind = body["type"]
         if kind == "productSaved":
-            products[body["product"]["id"]] = dict(body["product"])
+            product = dict(body["product"])
+            product.setdefault("note", None)
+            products[product["id"]] = product
         elif kind == "productDeleted":
             if body["productId"] not in products:
                 return "unknownProduct"
@@ -269,8 +271,8 @@ def check_change(change, where):
             raise ValueError("%s: bad category or unit" % where)
         if not isinstance(product["name"], str):
             raise ValueError("%s: the name is not text" % where)
-        for field in ("barcode", "foodId"):
-            if product[field] is not None and not isinstance(product[field], str):
+        for field in ("barcode", "foodId", "note"):
+            if product.get(field) is not None and not isinstance(product[field], str):
                 raise ValueError("%s: %s is not text" % (where, field))
     elif kind == "storageAreaSaved":
         check_id(body["area"]["id"], where)

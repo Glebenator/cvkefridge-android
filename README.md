@@ -41,9 +41,14 @@ CVKE Fridge has three repositories:
 - **Reminders.** One notification a day, at a time that the person sets, names the food that expires soon. See
   [Reminders](#reminders).
 - **The screen of a food.** A tap on a card opens the product with its batches in the use-first order. The person can
-  edit the product (name, category, unit) and each batch (quantity, storage area, date added, expiry date), and add
-  a batch. Below the batches is the history of the food. The product can have a photo. See [History, add again, and
-  the product photo](#history-add-again-and-the-product-photo).
+  edit the product (name, category, unit, note) and each batch (quantity, storage area, date added, expiry date), and
+  add a batch. Below the batches is the history of the food. The product can have a photo. See [History, add again,
+  and the product photo](#history-add-again-and-the-product-photo).
+- **Note.** A product can have one note (ADR 0010 in the cvkefridge repository). The screen of the food shows it below
+  the product, and a tap edits it in place. A product with no note has "Add a note". The add form has a note field:
+  for a food that the person has, it shows the note of that food, a different text replaces it, and an empty field
+  keeps it. The card on My Fridge shows the first line, and the search of My Fridge finds it. An empty note on the
+  screen of the food or in the edit form is removed (`inventory/Notes`).
 - **Still good?** A batch that is expiring or expired has "+1 day", "+1 week", and "Other date" on the screen of
   the food. A date on a package or an estimate is not always right. An expired batch starts from today, so "+1 day"
   means good until tomorrow (`inventory/LaterExpiry`). The message has "Undo". The new date is a chosen date (ADR 0009

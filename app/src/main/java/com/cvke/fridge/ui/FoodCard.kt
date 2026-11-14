@@ -42,6 +42,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -142,6 +143,16 @@ fun FoodCard(row: FoodRow, photo: ProductPhoto?, onOpen: () -> Unit, onAction: (
                         )
                         if (row.expiryDateCount > 1) {
                             Text(pluralStringResource(R.plurals.expiry_date_count, row.expiryDateCount, row.expiryDateCount))
+                        }
+                        // The note of the product, on one line. The screen of the food shows all of it.
+                        row.note?.let { note ->
+                            Text(
+                                note.lines().joinToString(" "),
+                                Modifier.testTag("food_note_${row.key}"),
+                                fontStyle = FontStyle.Italic,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
                         }
                     }
                 },

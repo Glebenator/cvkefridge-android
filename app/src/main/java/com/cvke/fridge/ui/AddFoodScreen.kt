@@ -338,6 +338,15 @@ fun AddFoodScreen(
                 estimateHint = estimateHint(form.food(products, ready.foods), area?.kind),
                 onChange = { form = form.copy(expiry = it) },
             )
+            OutlinedTextField(
+                value = form.note,
+                onValueChange = { form = form.withNote(it) },
+                modifier = Modifier.fillMaxWidth().testTag("field_note"),
+                label = { Text(stringResource(R.string.field_note)) },
+                placeholder = { Text(stringResource(R.string.field_note_placeholder)) },
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                minLines = 2,
+            )
             if (photoField) {
                 FormPhotoField(
                     photo = photo,
@@ -518,6 +527,8 @@ private val AddFoodFormSaver: Saver<AddFoodForm, Any> = listSaver(
             form.barcode,
             form.areaKept,
             form.startAreaId,
+            form.note,
+            form.noteEdited,
         )
     },
     restore = { saved ->
@@ -534,6 +545,8 @@ private val AddFoodFormSaver: Saver<AddFoodForm, Any> = listSaver(
             barcode = saved[9] as String?,
             areaKept = saved[10] as Boolean,
             startAreaId = saved[11] as String,
+            note = saved[12] as String,
+            noteEdited = saved[13] as Boolean,
         )
     },
 )

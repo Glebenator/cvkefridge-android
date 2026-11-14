@@ -21,6 +21,7 @@ import com.cvke.fridge.core.Outcome
 import com.cvke.fridge.core.StorageKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
@@ -49,6 +50,7 @@ class InventoryChangesDeviceTest : DeviceTest() {
         rule.onNodeWithTag("field_category").assertTextContains("Dairy")
         rule.onNodeWithTag("field_expiry").assertTextContains("estimated", substring = true)
         rule.onNodeWithTag("field_quantity").performTextReplacement("2")
+        rule.onNodeWithTag("field_note").performScrollTo().performTextInput("For the cake")
         rule.onNodeWithTag("save").performClick()
 
         waitFor(hasTestTag("total_items") and hasText("2"))
@@ -60,6 +62,8 @@ class InventoryChangesDeviceTest : DeviceTest() {
         val butter = inventory.products.single { it.name == "Butter" }
         val batch = inventory.batches.single { it.productId == butter.id }
         assertEquals("fk-1", butter.foodId)
+        assertEquals("For the cake", butter.note)
+        assertNull(inventory.products.single { it.name == "Rice" }.note)
         assertEquals(2_000L, batch.quantity)
         assertEquals(today(), batch.dateAdded)
         assertEquals(ExpirySource.ESTIMATED, batch.expiry?.source)
@@ -167,6 +171,41 @@ class InventoryChangesDeviceTest : DeviceTest() {
         assertEquals(6_000L to "freezer", batch.quantity to batch.storageAreaId)
         // The printed date of the batch stays.
         assertEquals(ExpirySource.PRINTED, batch.expiry?.source)
+    }
+
+    @Test
+    fun aNoteIsAddedOnTheScreenOfTheFoodAndRemovedInTheEditForm() {
+        start(SampleInventory.changes(today()))
+        rule.onNodeWithTag("tab_my_fridge").performClick()
+        val yoghurt = hasTestTag("food_sample-yoghurt/fridge")
+        rule.onNodeWithTag("my_fridge_screen").performScrollToNode(yoghurt)
+        rule.onNode(yoghurt).performClick()
+        waitFor(hasTestTag("food_screen"))
+
+        rule.onNodeWithTag("food_add_note").performClick()
+        rule.onNodeWithTag("food_note_field").performTextInput("  For the cake  ")
+        rule.onNodeWithTag("food_note_save").performClick()
+
+        // The screen shows the note, and the change log has it without the spaces at the ends.
+        waitFor(hasTestTag("food_note"))
+        rule.onNodeWithText("For the cake").assertIsDisplayed()
+        assertEquals("For the cake", inventory().products.single { it.id == "sample-yoghurt" }.note)
+
+        // The card on My Fridge shows the note.
+        rule.onNodeWithTag("back").performClick()
+        waitFor(hasTestTag("my_fridge_screen"))
+        rule.onNodeWithTag("my_fridge_screen").performScrollToNode(yoghurt)
+        rule.onNodeWithTag("food_note_sample-yoghurt/fridge", useUnmergedTree = true).assertTextContains("For the cake")
+
+        // An empty note in the edit form removes the note.
+        rule.onNode(yoghurt).performClick()
+        waitFor(hasTestTag("food_screen"))
+        rule.onNodeWithTag("edit_food").performClick()
+        waitFor(hasTestTag("edit_food_screen"))
+        rule.onNodeWithTag("field_note").performTextReplacement(" ")
+        rule.onNodeWithTag("save").performClick()
+        waitFor(hasTestTag("food_add_note"))
+        assertEquals(null, inventory().products.single { it.id == "sample-yoghurt" }.note)
     }
 
     @Test

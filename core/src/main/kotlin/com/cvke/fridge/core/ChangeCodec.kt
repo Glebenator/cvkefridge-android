@@ -15,7 +15,8 @@ import kotlinx.serialization.json.put
  * The iOS file `CVKEFridgeCore/Sources/CVKEFridgeCore/ChangeCodec.swift` must read the same JSON. The two apps do
  * not need to write the same bytes.
  *
- * A key with the value null must be in the JSON. A batch and a `batchEdited` body have `expiryDate` and
+ * A key with the value null must be in the JSON. The exception is the `note` of a product: changes from before the
+ * note have no `note` key, and a missing `note` is null. A batch and a `batchEdited` body have `expiryDate` and
  * `expirySource`: both are null, or both have a value.
  */
 object ChangeCodec {
@@ -72,6 +73,7 @@ object ChangeCodec {
         unit = product.enumOrNull("unit", MeasureUnit::fromKey),
         barcode = product.textOrNull("barcode"),
         foodId = product.textOrNull("foodId"),
+        note = if ("note" in product) product.textOrNull("note") else null,
     )
 
     private fun decodeBatch(batch: JsonObject) = Batch(
@@ -94,6 +96,7 @@ object ChangeCodec {
                     put("unit", body.product.unit?.key)
                     put("barcode", body.product.barcode)
                     put("foodId", body.product.foodId)
+                    put("note", body.product.note)
                 })
             }
             is ChangeBody.ProductDeleted -> {

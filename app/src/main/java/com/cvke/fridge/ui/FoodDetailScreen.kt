@@ -94,6 +94,8 @@ import com.cvke.fridge.ui.theme.Size
  * Below the batches, the history of the food shows what was used and what was thrown away, the newest first, with the
  * totals. It shows the first entries, and "Show all" shows the others.
  *
+ * Below the product, the note of the product, or "Add a note" (see [FoodNote]).
+ *
  * The product can have a photo. "Take a photo" opens the camera app, and "Choose a photo" opens the photo picker of
  * Android (see [rememberPhotoSources]). The photo is at the top of the screen, with "Change photo" and "Remove photo".
  * "Change photo" has the same two sources. The person can undo a remove. The photo is decorative, because the name of
@@ -178,6 +180,13 @@ fun FoodDetailScreen(
                         showIcon = !hasPhoto,
                         sources = if (hasPhoto) null else sources,
                         Modifier.padding(bottom = 8.dp),
+                    )
+                }
+                item(key = "note") {
+                    FoodNote(
+                        productId = screen.productId,
+                        note = detail.product.note,
+                        onSave = { onPerform(InventoryAction.SaveProduct(detail.product.copy(note = it))) },
                     )
                 }
                 if (detail.batches.isEmpty()) {

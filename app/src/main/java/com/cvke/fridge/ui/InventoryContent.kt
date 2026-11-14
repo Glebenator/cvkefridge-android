@@ -59,6 +59,7 @@ data class FoodRow(
     val freshness: Freshness,
     val batchFreshness: Set<Freshness>,
     val expiryDateCount: Int,
+    val note: String? = null,
 )
 
 /**
@@ -141,8 +142,8 @@ data class InventoryContent(
     val sample: Boolean,
 ) {
     /**
-     * The rows and the counts for [filter]. The search text is compared with the name, the category, the unit, and the
-     * name of the storage area. Case has no effect.
+     * The rows and the counts for [filter]. The search text is compared with the name, the category, the unit, the
+     * name of the storage area, and the note. Case has no effect.
      */
     fun filtered(filter: FoodFilter): FilteredFoods {
         val area = areas.firstOrNull { it.id == filter.areaId }
@@ -150,7 +151,7 @@ data class InventoryContent(
         val category = filter.category?.takeIf { wanted -> inArea.any { it.category == wanted } }
         val text = filter.query.trim()
         val found = inArea.filter { row ->
-            text.isEmpty() || listOfNotNull(row.name, row.category.key, row.unit?.key, row.areaName)
+            text.isEmpty() || listOfNotNull(row.name, row.category.key, row.unit?.key, row.areaName, row.note)
                 .any { it.contains(text, ignoreCase = true) }
         }
         // The counts of one filter are for the rows that agree with the search text and with the other filter.
@@ -214,6 +215,7 @@ data class InventoryContent(
                     freshness = Freshness.of(daysLeft),
                     batchFreshness = batches.mapTo(HashSet()) { Freshness.of(Freshness.daysLeft(today, it.expiry?.date)) },
                     expiryDateCount = batches.mapNotNull { it.expiry?.date }.distinct().size,
+                    note = product.note,
                 )
             }.sortedWith(
                 compareBy<FoodRow> { areaIndex.getValue(it.areaId) }

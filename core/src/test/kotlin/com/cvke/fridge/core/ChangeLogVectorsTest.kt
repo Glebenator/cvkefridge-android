@@ -20,7 +20,7 @@ class ChangeLogVectorsTest {
         "products" to inventory.products.map {
             json(
                 "id" to it.id, "name" to it.name, "category" to it.category.key, "unit" to it.unit?.key,
-                "barcode" to it.barcode, "foodId" to it.foodId,
+                "barcode" to it.barcode, "foodId" to it.foodId, "note" to it.note,
             )
         },
         "storageAreas" to inventory.storageAreas.map {

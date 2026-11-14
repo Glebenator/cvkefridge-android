@@ -90,6 +90,28 @@ class InventoryActionsTest {
     }
 
     @Test
+    fun aNoteOfTheAddFormGoesOnTheProductAndAnEmptyNoteKeepsTheNote() {
+        val action = InventoryAction.AddFood(null, "Jam", Category.CONDIMENT, null, null, 1_000, "fridge", null, note = "For the cake")
+        val (_, changes) = apply(action)
+        val jam = Inventory.replay(changes).products.single { it.name == "Jam" }
+        assertEquals("For the cake", jam.note)
+
+        // A batch with no note keeps the note of the product, and saves the product not again.
+        val (same, _) = apply(action.copy(productId = jam.id, note = null), changes)
+        assertEquals(1, same.bodies.size)
+        // A batch with the same note also does not save the product again.
+        val (unchanged, _) = apply(action.copy(productId = jam.id), changes)
+        assertEquals(1, unchanged.bodies.size)
+
+        // A batch with another note replaces the note, and the undo of the add brings the first note back.
+        val (other, replaced) = apply(action.copy(productId = jam.id, note = "Opened"), changes)
+        assertEquals(2, other.bodies.size)
+        assertEquals("Opened", Inventory.replay(replaced).products.single { it.id == jam.id }.note)
+        val (_, undone) = apply(InventoryAction.Undo(replaced.drop(changes.size).map { it.id }), replaced)
+        assertEquals("For the cake", Inventory.replay(undone).products.single { it.id == jam.id }.note)
+    }
+
+    @Test
     fun aScannedBarcodeGoesOnTheProductWhenNoOtherProductHasIt() {
         val scanned = InventoryAction.AddFood(null, "Nutella", Category.CONDIMENT, MeasureUnit.G, null, 400_000, "pantry", null, "3017620422003")
         val (_, changes) = apply(scanned)

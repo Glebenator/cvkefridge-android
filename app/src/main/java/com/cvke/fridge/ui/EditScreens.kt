@@ -35,7 +35,7 @@ import java.text.DecimalFormatSymbols
 import java.util.UUID
 
 /**
- * The form that edits a product: its name, its category, and its unit. The unit is the unit of all batches of the
+ * The form that edits a product: its name, its category, its unit, and its note. The unit is the unit of all batches of the
  * product. A write that fails leaves the form as it is, with a message.
  */
 @Composable
@@ -111,6 +111,15 @@ fun EditProductScreen(
                 stringResource(R.string.edit_food_unit_note),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
+            )
+            OutlinedTextField(
+                value = form.note,
+                onValueChange = { form = form.copy(note = it) },
+                modifier = Modifier.fillMaxWidth().testTag("field_note"),
+                label = { Text(stringResource(R.string.field_note)) },
+                placeholder = { Text(stringResource(R.string.field_note_placeholder)) },
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                minLines = 3,
             )
             if (failed != null) SaveFailedNote(failed.reason)
         }
@@ -239,13 +248,14 @@ private fun SaveButton(saving: Boolean, onSave: () -> Unit) {
 }
 
 private val ProductFormSaver: Saver<ProductForm, Any> = listSaver(
-    save = { listOf(it.name, it.category.key, it.unit?.key, it.checked) },
+    save = { listOf(it.name, it.category.key, it.unit?.key, it.note, it.checked) },
     restore = { saved ->
         ProductForm(
             name = saved[0] as String,
             category = Category.fromKey(saved[1] as String) ?: Category.OTHER,
             unit = (saved[2] as String?)?.let(MeasureUnit::fromKey),
-            checked = saved[3] as Boolean,
+            note = saved[3] as String,
+            checked = saved[4] as Boolean,
         )
     },
 )

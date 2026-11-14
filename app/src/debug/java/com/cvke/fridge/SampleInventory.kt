@@ -40,7 +40,7 @@ object SampleInventory {
     )
 
     private val products = listOf(
-        Product("sample-milk", "Whole milk", Category.DAIRY, MeasureUnit.L, null, null),
+        Product("sample-milk", "Whole milk", Category.DAIRY, MeasureUnit.L, null, null, note = "Opened on Tuesday"),
         Product("sample-chicken", "Chicken thighs", Category.MEAT, MeasureUnit.G, null, null),
         Product("sample-spinach", "Baby spinach", Category.PRODUCE, MeasureUnit.G, null, null),
         Product("sample-yoghurt", "Greek yoghurt", Category.DAIRY, MeasureUnit.PCS, null, null),
@@ -56,7 +56,7 @@ object SampleInventory {
         Product("sample-strawberries", "Strawberries", Category.PRODUCE, MeasureUnit.G, null, "fk-481"),
         Product("sample-bananas", "Bananas", Category.PRODUCE, MeasureUnit.PCS, null, "fk-251"),
         Product("sample-salmon", "Salmon fillet", Category.MEAT, MeasureUnit.G, null, null),
-        Product("sample-curry", "Leftover curry", Category.LEFTOVERS, null, null, null),
+        Product("sample-curry", "Leftover curry", Category.LEFTOVERS, null, null, null, note = "Made on Sunday. Spicy, so not for the children."),
         Product("sample-croissants", "Croissants", Category.BAKERY, MeasureUnit.PCS, null, null),
     )
 

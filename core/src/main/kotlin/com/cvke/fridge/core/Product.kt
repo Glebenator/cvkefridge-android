@@ -49,6 +49,7 @@ enum class MeasureUnit(val key: String) {
  * @property unit The unit, or null for none.
  * @property barcode The barcode text, or null.
  * @property foodId The identifier of the food in the table of foods, or null.
+ * @property note The text that the person wrote about the product, or null. The core keeps it as it is.
  */
 data class Product(
     val id: String,
@@ -57,4 +58,5 @@ data class Product(
     val unit: MeasureUnit?,
     val barcode: String?,
     val foodId: String?,
+    val note: String? = null,
 )

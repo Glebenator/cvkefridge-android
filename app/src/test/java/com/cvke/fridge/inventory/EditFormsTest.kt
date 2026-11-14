@@ -37,6 +37,19 @@ class EditFormsTest {
     }
 
     @Test
+    fun theNoteIsSavedWithoutSpacesAtTheEndsAndAnEmptyNoteIsRemoved() {
+        val withNote = butter.copy(note = "Opened")
+        assertEquals("Opened", ProductForm.of(withNote).note)
+        assertEquals("", ProductForm.of(butter).note)
+        fun saved(note: String) = ProductForm("Butter", Category.DAIRY, MeasureUnit.G, note).action(withNote, products, foods)?.product?.note
+        assertEquals("For the cake,\nnot for toast", saved("  For the cake,\nnot for toast \n"))
+        assertNull(saved("   \n "))
+        assertNull(saved(""))
+        // The other values of the form do not change the note.
+        assertEquals("Opened", checkNotNull(ProductForm.of(withNote).copy(name = "Salted butter").action(withNote, products, foods)).product.note)
+    }
+
+    @Test
     fun aProductCannotGetTheNameOfAnotherProduct() {
         assertEquals(NameError.IN_USE, ProductForm("whole MILK", Category.DAIRY, null).nameError(butter, products))
         assertNull(ProductForm("BUTTER", Category.DAIRY, null).nameError(butter, products))

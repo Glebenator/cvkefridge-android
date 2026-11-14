@@ -26,6 +26,9 @@ enum class NameError { EMPTY, TOO_LONG, IN_USE }
  * @property startAreaId The storage area of the form when the food has no usual storage kind.
  * @property checked True after the person selected "Save" one time. The form then shows the problem of each field.
  * @property barcode The barcode of a scan, or null. The form shows it but does not let the person change it.
+ * @property note The text of the note field. A product that the person selected from the suggestions, or with "Add
+ *   again", puts its note in the field.
+ * @property noteEdited True after the person typed in the note field. The form then does not change the note.
  */
 data class AddFoodForm(
     val name: String = "",
@@ -40,6 +43,8 @@ data class AddFoodForm(
     val expiry: ExpiryInput = ExpiryInput.Suggested,
     val checked: Boolean = false,
     val barcode: String? = null,
+    val note: String = "",
+    val noteEdited: Boolean = false,
 ) {
     /** The product in the inventory with this name. The form then adds a batch to it, and makes no second product. */
     fun product(products: List<Product>): Product? {
@@ -58,13 +63,22 @@ data class AddFoodForm(
     fun withName(text: String, foods: FoodTable, areas: List<StorageArea>): AddFoodForm {
         val kept = foodId?.let(foods::food)?.takeIf { FoodSuggestions.fits(it, text) }
         val food = kept ?: FoodSuggestions.onlyFoodNamed(text, foods)
-        return copy(name = text, foodId = food?.id, category = if (categoryChosen || food == null) category else food.category)
-            .afterFoodOf(this, foods, areas)
+        // A note that came from a selected product goes away with its name.
+        return copy(
+            name = text,
+            foodId = food?.id,
+            category = if (categoryChosen || food == null) category else food.category,
+            note = if (noteEdited) note else "",
+        ).afterFoodOf(this, foods, areas)
     }
 
     /** The form after the person selected a suggestion. A change of the food gives the storage area of the food. */
     fun withSuggestion(suggestion: Suggestion, foods: FoodTable, areas: List<StorageArea>): AddFoodForm = when (suggestion) {
-        is Suggestion.OfProduct -> copy(name = suggestion.product.name, foodId = suggestion.product.foodId)
+        is Suggestion.OfProduct -> copy(
+            name = suggestion.product.name,
+            foodId = suggestion.product.foodId,
+            note = if (noteEdited) note else suggestion.product.note.orEmpty(),
+        )
         is Suggestion.OfFood -> copy(
             name = suggestion.food.name,
             foodId = suggestion.food.id,
@@ -84,6 +98,9 @@ data class AddFoodForm(
         val kind = foodId?.let(foods::food)?.usualKind
         return copy(storageAreaId = kind?.let { areaOfKind(it, startAreaId, areas) } ?: startAreaId)
     }
+
+    /** The form after the person typed in the note field. */
+    fun withNote(text: String): AddFoodForm = copy(note = text, noteEdited = true)
 
     /** The form after the person selected a storage area. A food then does not change it. */
     fun withArea(id: String): AddFoodForm = copy(storageAreaId = id, areaKept = true)
@@ -114,7 +131,11 @@ data class AddFoodForm(
 
     fun quantityError(): TypedQuantity.Error? = QuantityText.parse(quantity) as? TypedQuantity.Error
 
-    /** The action that saves the form, or null when a field has a problem. */
+    /**
+     * The action that saves the form, or null when a field has a problem. The note of a new product is the cleaned
+     * text of the note field ([Notes.clean]). For a product in the inventory, a note replaces its note, and an empty
+     * note field keeps its note: the add form does not remove a note.
+     */
     fun action(products: List<Product>, areas: List<StorageArea>, foods: FoodTable, today: CalendarDate): InventoryAction.AddFood? {
         val typed = QuantityText.parse(quantity) as? TypedQuantity.Value ?: return null
         if (nameError() != null || areas.none { it.id == storageAreaId }) return null
@@ -129,6 +150,7 @@ data class AddFoodForm(
             storageAreaId = storageAreaId,
             expiry = ExpiryChoice.expiry(expiry, estimate(products, areas, foods, today)),
             barcode = barcode,
+            note = Notes.clean(note),
         )
     }
 
@@ -183,6 +205,7 @@ data class AddFoodForm(
                 category = product.category,
                 unit = product.unit,
                 storageAreaId = startArea,
+                note = product.note.orEmpty(),
             ).again(values, decimalSeparator)
 
         /**

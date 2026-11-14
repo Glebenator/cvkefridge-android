@@ -289,6 +289,11 @@
     <!-- The forms that edit a product and a batch. -->
     <string name="edit_food">Edit food</string>
     <string name="edit_batch">Edit batch</string>
+    <string name="field_note">Note</string>
+    <string name="field_note_placeholder">For example: opened on Sunday</string>
+    <string name="food_note">Note</string>
+    <string name="food_add_note">Add a note</string>
+    <string name="food_edit_note">Edit the note</string>
     <string name="edit_food_unit_note">The unit is the unit of all batches of this food.</string>
     <string name="field_date_added">Date added</string>
 

@@ -59,6 +59,10 @@ class ChangeCodecTest {
         for (text in bad) {
             assertThrows(text, IllegalArgumentException::class.java) { ChangeCodec.decode(text) }
         }
+        val noteNotText = "{\"id\":\"c-1\",\"at\":1,\"origin\":\"phone-a\",\"body\":{\"type\":\"productSaved\"," +
+            "\"product\":{\"id\":\"p-1\",\"name\":\"Jam\",\"category\":\"condiment\",\"unit\":null," +
+            "\"barcode\":null,\"foodId\":null,\"note\":5}}}"
+        assertThrows(IllegalArgumentException::class.java) { ChangeCodec.decode(noteNotText) }
         val withoutExpiryKeys = batchAdded().replace(",\"expiryDate\":\"2026-11-12\",\"expirySource\":\"printed\"", "")
         assertThrows(IllegalArgumentException::class.java) { ChangeCodec.decode(withoutExpiryKeys) }
     }

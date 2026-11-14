@@ -122,6 +122,18 @@ class InventoryContentTest {
     }
 
     @Test
+    fun theSearchTextIsAlsoInTheNote() {
+        val content = content(
+            ChangeBody.ProductSaved(Product("jam", "Jam", Category.CONDIMENT, null, null, null, note = "For the CAKE")),
+            product("rice", "Rice"),
+            batch("b1", "jam", "fridge", "2026-11-05", null),
+            batch("b2", "rice", "fridge", "2026-11-05", null),
+        )
+        assertEquals("For the CAKE", content.foods.single { it.productId == "jam" }.note)
+        assertEquals(listOf("jam/fridge"), content.filtered(FoodFilter(null, null, query = "cake")).rows.map { it.key })
+    }
+
+    @Test
     fun filterIsForTheFreshnessOfEachBatchOfAFood() {
         fun keys(vararg freshness: Freshness, areaId: String? = null) =
             sample.filtered(FoodFilter(areaId, freshness = freshness.toSet())).rows.map { it.key }

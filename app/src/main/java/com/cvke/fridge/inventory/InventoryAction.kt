@@ -34,6 +34,7 @@ sealed interface InventoryAction {
         val storageAreaId: String,
         val expiry: ExpiryDate?,
         val barcode: String? = null,
+        val note: String? = null,
     ) : InventoryAction
 
     /** Replaces the values of a product. */
@@ -187,9 +188,14 @@ object InventoryActions {
             inventory.products.none { it.id != productId && it.barcode?.let(Barcodes::normalize) == code }
         }
         val existing = action.productId?.let { id -> inventory.products.firstOrNull { it.id == id } }
+        // A product in the inventory gets the barcode when it has none, and the note when the action has one.
+        val changed = existing?.copy(
+            barcode = existing.barcode ?: barcode,
+            note = action.note ?: existing.note,
+        )
         val saved = when {
-            action.productId == null -> Product(productId, action.name, action.category, action.unit, barcode, action.foodId)
-            existing != null && existing.barcode == null && barcode != null -> existing.copy(barcode = barcode)
+            action.productId == null -> Product(productId, action.name, action.category, action.unit, barcode, action.foodId, action.note)
+            changed != existing -> changed
             else -> null
         }
         val batch = Batch(newId(), productId, action.quantity, action.storageAreaId, today, action.expiry)

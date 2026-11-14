@@ -12,9 +12,16 @@ import com.cvke.fridge.core.StorageArea
 /**
  * What the person typed and selected in the form that edits a product.
  *
+ * @property note The text of the note field. An empty text or only spaces saves no note.
  * @property checked True after the person selected "Save" one time. The form then shows the problem of the name.
  */
-data class ProductForm(val name: String, val category: Category, val unit: MeasureUnit?, val checked: Boolean = false) {
+data class ProductForm(
+    val name: String,
+    val category: Category,
+    val unit: MeasureUnit?,
+    val note: String = "",
+    val checked: Boolean = false,
+) {
     /** The problem of the name. Two products cannot have the same name, because the add form finds a product by its name. */
     fun nameError(product: Product, products: List<Product>): NameError? {
         val cleaned = Names.clean(name)
@@ -35,11 +42,13 @@ data class ProductForm(val name: String, val category: Category, val unit: Measu
         val cleaned = Names.clean(name)
         val kept = product.foodId?.let(foods::food)?.takeIf { Names.same(product.name, cleaned) || FoodSuggestions.fits(it, cleaned) }
         val foodId = if (kept != null) kept.id else FoodSuggestions.onlyFoodNamed(cleaned, foods)?.id
-        return InventoryAction.SaveProduct(product.copy(name = cleaned, category = category, unit = unit, foodId = foodId))
+        return InventoryAction.SaveProduct(
+            product.copy(name = cleaned, category = category, unit = unit, foodId = foodId, note = Notes.clean(note)),
+        )
     }
 
     companion object {
-        fun of(product: Product) = ProductForm(product.name, product.category, product.unit)
+        fun of(product: Product) = ProductForm(product.name, product.category, product.unit, product.note.orEmpty())
     }
 }
 

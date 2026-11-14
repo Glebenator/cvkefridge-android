@@ -112,6 +112,25 @@ class AddFoodFormTest {
     }
 
     @Test
+    fun theNoteOfASelectedProductIsInTheFieldUntilTheNameChanges() {
+        val jam = Product("p-jam", "Jam", Category.CONDIMENT, null, null, null, note = "For the cake")
+        val all = listOf(milk, jam)
+        val selected = AddFoodForm().withName("ja", foods, areas).withSuggestion(Suggestion.OfProduct(jam), foods, areas)
+        assertEquals("For the cake", selected.note)
+        // Another name removes the note of the product. A note that the person typed stays.
+        assertEquals("", selected.withName("Jams", foods, areas).note)
+        val typed = selected.withNote("Opened").withName("Jams", foods, areas)
+        assertEquals("Opened", typed.note)
+        assertEquals("Opened", typed.withSuggestion(Suggestion.OfProduct(jam), foods, areas).note)
+        // "Add again" also puts the note in the field.
+        assertEquals("For the cake", AddFoodForm.again(jam, AgainValues(null, null), "fridge", '.').note)
+
+        // The action has the cleaned note, or null for an empty field.
+        assertEquals("Opened", AddFoodForm(name = "Jam", note = " Opened \n").action(all, areas, foods, today)?.note)
+        assertNull(AddFoodForm(name = "Jam", note = "  ").action(all, areas, foods, today)?.note)
+    }
+
+    @Test
     fun aFormWithAProblemSavesNothing() {
         assertEquals(NameError.EMPTY, AddFoodForm(name = "  ").nameError())
         assertEquals(NameError.TOO_LONG, AddFoodForm(name = "a".repeat(81)).nameError())

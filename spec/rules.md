@@ -14,6 +14,8 @@ that is a defect in this folder. Correct it here first.
 - **Quantity.** A whole number of thousandths. `1500` is 1.5. The core does no arithmetic with fractions.
 - **Unit.** `pcs`, `g`, `kg`, `ml`, `l`, `pack`, `bottle`, `slice`, `cup`, or none. The unit belongs to the product.
   All batches of a product have the same unit.
+- **Note.** A text that the person writes about a product, or none. The core keeps the text as it is. It does not
+  remove spaces and it has no maximum length. The app saves none in place of an empty text.
 - **Category.** `produce`, `dairy`, `meat`, `condiment`, `beverage`, `bakery`, `leftovers`, or `other`.
 - **Storage kind.** `pantry`, `fridge`, or `freezer`. Each storage area has one kind.
 
@@ -102,7 +104,7 @@ that made it, and a body with a type.
 
 | Type | Fields | Effect | Rejected when |
 |---|---|---|---|
-| `productSaved` | `product` | Adds the product, or replaces the product with the same identifier. | Never |
+| `productSaved` | `product` (identifier, name, category, unit, barcode, food, note) | Adds the product, or replaces the product with the same identifier. A product with no `note` key has no note: changes from before the note have no `note` key. | Never |
 | `productDeleted` | `productId` | Removes the product, its batches, and the history of those batches. | `unknownProduct` |
 | `storageAreaSaved` | `area` (identifier, name, kind) | Adds the storage area, or replaces the one with the same identifier. | `fixedStorageArea`: the identifier is `fridge` or `freezer` |
 | `storageAreaDeleted` | `storageAreaId` | Removes the storage area. | `fixedStorageArea`, `unknownStorageArea`, or `storageAreaInUse`: an active batch is in it. The checks are in this order. |
