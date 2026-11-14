@@ -21,12 +21,16 @@ The rules of the conversion:
   time: a number, "Package use-by date", "When Ripe", or "Indefinitely". All the groups of the kind count, also
   "after opening" and "after thawing". "Not Recommended" and a tip with no time do not count. A food of the
   FoodKeeper category "Food Purchased Frozen" has the usual kind freezer. A food with no time has no usual kind.
+- "common" (true) and "aliases" come from spec/tools/food-extras.json, which is edited by hand. An alias is in lowercase.
+  An alias that is the name of the food, or that is two times in the list, is not added. A food that is not common has
+  no "common" key, and a food with no alias has no "aliases" key.
 """
 import json
 import sys
 from pathlib import Path
 
 SPEC = Path(__file__).resolve().parent.parent
+EXTRAS = SPEC / "tools" / "food-extras.json"
 
 DAYS_PER = {"days": 1, "weeks": 7, "months": 30, "year": 365, "years": 365}
 
@@ -142,6 +146,24 @@ def main():
             food["usualKind"] = usual
         foods.append(food)
     foods.sort(key=lambda food: int(food["id"][3:]))
+
+    extras = json.loads(EXTRAS.read_text(encoding="utf-8"))
+    by_id = {food["id"]: food for food in foods}
+    unknown = [food_id for food_id in list(extras["common"]) + list(extras["aliases"]) if food_id not in by_id]
+    if unknown:
+        print("food-extras.json has foods that are not in the source: %s" % ", ".join(unknown))
+        return 1
+    for food_id in extras["common"]:
+        by_id[food_id]["common"] = True
+    for food_id, names in extras["aliases"].items():
+        food = by_id[food_id]
+        aliases = []
+        for name in names:
+            name = " ".join(name.split()).lower()
+            if name and name != food["name"].lower() and name not in aliases:
+                aliases.append(name)
+        if aliases:
+            food["aliases"] = aliases
 
     if "�" in json.dumps(foods, ensure_ascii=False):
         print("The source has a damaged character that clean() does not repair.")

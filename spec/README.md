@@ -10,6 +10,7 @@ that does not agree with it has a defect.
 | [foods.json](foods.json) | The table of foods for the expiry estimate |
 | [tools/vectors.py](tools/vectors.py) | The reference model. It calculates the expected results of the vectors. |
 | [tools/build-foods.py](tools/build-foods.py) | Makes `foods.json` from the USDA FSIS FoodKeeper data |
+| [tools/food-extras.json](tools/food-extras.json) | The common foods and the aliases, edited by hand. `build-foods.py` adds them to `foods.json`. |
 
 ## How an app uses this folder
 

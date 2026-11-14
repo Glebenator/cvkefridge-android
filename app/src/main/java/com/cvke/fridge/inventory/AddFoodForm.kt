@@ -88,10 +88,14 @@ data class AddFoodForm(
     /** The form after the person selected a storage area. A food then does not change it. */
     fun withArea(id: String): AddFoodForm = copy(storageAreaId = id, areaKept = true)
 
-    /** The suggestions for the name. A name that is complete has none: the name of a product, or of the food of the form. */
+    /**
+     * The suggestions for the name. A name that is complete has none: the name of a product, or the name or an alias of
+     * the food of the form.
+     */
     fun suggestions(products: List<Product>, foods: FoodTable): List<Suggestion> {
         if (product(products) != null) return emptyList()
-        if (foodId?.let(foods::food)?.let { Names.same(it.name, name) } == true) return emptyList()
+        val food = foodId?.let(foods::food)
+        if (food != null && (Names.same(food.name, name) || Names.clean(name).lowercase() in food.aliases)) return emptyList()
         return FoodSuggestions.find(name, products, foods)
     }
 

@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.intOrNull
 
 /**
@@ -15,6 +16,8 @@ import kotlinx.serialization.json.intOrNull
  * @property days The days that the food keeps, for each storage kind where it can be kept.
  * @property usualKind The storage kind where people usually keep the food when they bring it home, or null. The food can
  *   have no days for it. It gives no estimate.
+ * @property common True for a food that people add often. The suggestions show it first.
+ * @property aliases Other names for the food, in lowercase. They give no estimate.
  */
 data class Food(
     val id: String,
@@ -24,6 +27,8 @@ data class Food(
     val keywords: List<String>,
     val days: Map<StorageKind, Int>,
     val usualKind: StorageKind? = null,
+    val common: Boolean = false,
+    val aliases: List<String> = emptyList(),
 )
 
 /**
@@ -49,8 +54,8 @@ data class FoodTable(val foods: List<Food>) {
     companion object {
         /**
          * Reads the format of `spec/foods.json`: an object with a `foods` array. Other top-level keys have no effect.
-         * `subtitle`, `keywords`, and `usualKind` can be absent. A `days` key or a `usualKind` that is not a storage kind
-         * is an error.
+         * `subtitle`, `keywords`, `usualKind`, `common`, and `aliases` can be absent. A `days` key or a `usualKind` that is
+         * not a storage kind is an error.
          *
          * @throws IllegalArgumentException when the text is not in this format.
          */
@@ -66,6 +71,8 @@ data class FoodTable(val foods: List<Food>) {
             val subtitle = food["subtitle"]
             val keywords = food["keywords"]
             val usualKind = food["usualKind"]
+            val common = food["common"]
+            val aliases = food["aliases"]
             return Food(
                 id = text(food["id"], "id"),
                 name = text(food["name"], "name"),
@@ -86,6 +93,15 @@ data class FoodTable(val foods: List<Food>) {
                     null
                 } else {
                     text(usualKind, "usualKind").let { StorageKind.fromKey(it) ?: fail("Unknown storage kind: $it") }
+                },
+                common = when (common) {
+                    null, is JsonNull -> false
+                    else -> (common as? JsonPrimitive)?.takeUnless { it.isString }?.booleanOrNull ?: fail("common is not true or false")
+                },
+                aliases = when (aliases) {
+                    null, is JsonNull -> emptyList()
+                    is JsonArray -> aliases.map { text(it, "alias") }
+                    else -> fail("aliases is not an array")
                 },
             )
         }

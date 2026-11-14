@@ -235,7 +235,8 @@ class HistoryDeviceTest : DeviceTest() {
         rule.onNodeWithTag("field_name").performTextInput("Butter")
         rule.onNodeWithTag("form_photo").performScrollTo()
         rule.onNodeWithTag("photo_choose").performScrollTo().performClick()
-        waitFor(hasTestTag("form_photo_image"))
+        // The app makes the photo off the main thread. On an emulator that just started, this can take longer.
+        rule.waitUntil(MESSAGE_MILLIS) { rule.onAllNodes(hasTestTag("form_photo_image")).fetchSemanticsNodes().isNotEmpty() }
         // The form keeps the photo until the save. The food does not exist yet.
         assertTrue(photos.list().isNullOrEmpty())
 

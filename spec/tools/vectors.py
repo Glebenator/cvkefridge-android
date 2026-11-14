@@ -309,6 +309,11 @@ def check_foods(table, where):
                 raise ValueError("%s: bad days for %s" % (where, food["id"]))
         if food.get("usualKind", "fridge") not in STORAGE_KINDS:
             raise ValueError("%s: bad usual storage kind for %s" % (where, food["id"]))
+        if food.get("common", True) is not True:
+            raise ValueError("%s: common must be true or absent for %s" % (where, food["id"]))
+        aliases = food.get("aliases", ["a"])
+        if not aliases or any(not isinstance(a, str) or not a or a != a.strip().lower() for a in aliases):
+            raise ValueError("%s: bad aliases for %s" % (where, food["id"]))
 
 
 # ---- The expected values of each vector file
@@ -371,11 +376,15 @@ def expect_food_table(data):
     foods = table["foods"]
     step = max(1, len(foods) // 12)
     samples = [{"foodId": food["id"], "name": food["name"], "category": food["category"], "days": food["days"],
-                "usualKind": food.get("usualKind")}
+                "usualKind": food.get("usualKind"), "common": food.get("common", False),
+                "aliases": food.get("aliases", [])}
                for food in foods[::step]]
     with_days = {kind: sum(1 for food in foods if kind in food["days"]) for kind in STORAGE_KINDS}
     usual = {kind: sum(1 for food in foods if food.get("usualKind") == kind) for kind in STORAGE_KINDS}
-    yield data, {"count": len(foods), "withDays": with_days, "withUsualKind": usual, "samples": samples}
+    common = sum(1 for food in foods if food.get("common"))
+    aliases = sum(len(food.get("aliases", [])) for food in foods)
+    yield data, {"count": len(foods), "withDays": with_days, "withUsualKind": usual, "common": common,
+                 "aliases": aliases, "samples": samples}
 
 
 FILES = {

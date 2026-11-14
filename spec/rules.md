@@ -54,6 +54,9 @@ that is a defect in this folder. Correct it here first.
 - A food can have a **usual storage kind**: the storage kind where people usually keep the food when they bring it home.
   It can be absent. It can be a kind for which the food has no days, for example milk that keeps until the date on the
   package. `tools/build-foods.py` has the rule that sets it. The usual storage kind gives no estimate.
+- A food can be **common**: a food that people add often. A food can have **aliases**: other names for the food, in
+  lowercase. `tools/food-extras.json` has them. They are for the suggestions of the add form, and they give no
+  estimate.
 
 ## 5. Batches and the use-first order
 

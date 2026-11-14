@@ -1,5 +1,5 @@
 {
-  "description": "Facts about spec/foods.json: the number of foods, the number with days for each storage kind, the number with each usual storage kind, and some foods. An app that reads the table must find the same.",
+  "description": "Facts about spec/foods.json: the number of foods, the number with days for each storage kind, the number with each usual storage kind, the number of common foods, the number of aliases, and some foods. An app that reads the table must find the same.",
   "expect": {
     "count": 661,
     "withDays": {
@@ -12,6 +12,8 @@
       "fridge": 301,
       "freezer": 29
     },
+    "common": 142,
+    "aliases": 285,
     "samples": [
       {
         "foodId": "fk-1",
@@ -21,7 +23,9 @@
           "fridge": 30,
           "freezer": 180
         },
-        "usualKind": "fridge"
+        "usualKind": "fridge",
+        "common": true,
+        "aliases": []
       },
       {
         "foodId": "fk-58",
@@ -31,7 +35,9 @@
           "fridge": 3,
           "freezer": 120
         },
-        "usualKind": "fridge"
+        "usualKind": "fridge",
+        "common": false,
+        "aliases": []
       },
       {
         "foodId": "fk-119",
@@ -41,14 +47,18 @@
           "fridge": 1,
           "freezer": 270
         },
-        "usualKind": "fridge"
+        "usualKind": "fridge",
+        "common": false,
+        "aliases": []
       },
       {
         "foodId": "fk-179",
         "name": "Fruit, cut",
         "category": "leftovers",
         "days": {},
-        "usualKind": "fridge"
+        "usualKind": "fridge",
+        "common": false,
+        "aliases": []
       },
       {
         "foodId": "fk-237",
@@ -57,7 +67,9 @@
         "days": {
           "pantry": 1095
         },
-        "usualKind": "pantry"
+        "usualKind": "pantry",
+        "common": false,
+        "aliases": []
       },
       {
         "foodId": "fk-293",
@@ -68,7 +80,9 @@
           "fridge": 2,
           "freezer": 300
         },
-        "usualKind": "pantry"
+        "usualKind": "pantry",
+        "common": false,
+        "aliases": []
       },
       {
         "foodId": "fk-350",
@@ -77,7 +91,11 @@
         "days": {
           "pantry": 90
         },
-        "usualKind": "pantry"
+        "usualKind": "pantry",
+        "common": true,
+        "aliases": [
+          "mayo"
+        ]
       },
       {
         "foodId": "fk-406",
@@ -86,7 +104,9 @@
         "days": {
           "pantry": 360
         },
-        "usualKind": "pantry"
+        "usualKind": "pantry",
+        "common": false,
+        "aliases": []
       },
       {
         "foodId": "fk-463",
@@ -95,7 +115,14 @@
         "days": {
           "pantry": 365
         },
-        "usualKind": "pantry"
+        "usualKind": "pantry",
+        "common": true,
+        "aliases": [
+          "rose wine",
+          "sparkling wine",
+          "prosecco",
+          "champagne"
+        ]
       },
       {
         "foodId": "fk-518",
@@ -105,7 +132,9 @@
           "fridge": 14,
           "freezer": 60
         },
-        "usualKind": "fridge"
+        "usualKind": "fridge",
+        "common": false,
+        "aliases": []
       },
       {
         "foodId": "fk-574",
@@ -115,7 +144,9 @@
           "pantry": 3,
           "fridge": 60
         },
-        "usualKind": "pantry"
+        "usualKind": "pantry",
+        "common": false,
+        "aliases": []
       },
       {
         "foodId": "fk-629",
@@ -125,7 +156,9 @@
           "fridge": 3,
           "freezer": 90
         },
-        "usualKind": "fridge"
+        "usualKind": "fridge",
+        "common": false,
+        "aliases": []
       },
       {
         "foodId": "fk-684",
@@ -135,7 +168,9 @@
           "pantry": 180,
           "freezer": 365
         },
-        "usualKind": "pantry"
+        "usualKind": "pantry",
+        "common": false,
+        "aliases": []
       }
     ]
   }
